@@ -1,0 +1,8 @@
+target/
+.env
+*.rs.bk
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

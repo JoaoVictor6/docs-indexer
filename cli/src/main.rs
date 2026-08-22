@@ -1,4 +1,6 @@
 mod config;
+mod embedding;
+mod openrouter;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

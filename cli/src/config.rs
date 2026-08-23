@@ -28,8 +28,6 @@ fn default_embedding_dimension() -> i32 {
 
 impl Config {
     pub fn from_file(path: &Path) -> anyhow::Result<Self> {
-        let _ = dotenvy::dotenv();
-
         let contents = std::fs::read_to_string(path)
             .with_context(|| format!("failed to read config file: {}", path.display()))?;
 
@@ -60,10 +58,7 @@ impl Config {
 mod tests {
     use super::*;
     use std::io::Write;
-    use std::sync::Mutex;
     use tempfile::NamedTempFile;
-
-    static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
     fn clear_config_env() {
         std::env::remove_var("DATABASE_URL");
@@ -75,7 +70,6 @@ mod tests {
 
     #[test]
     fn test_from_file_basic() {
-        let _guard = ENV_MUTEX.lock().unwrap();
         clear_config_env();
 
         let yaml = r#"
@@ -95,7 +89,6 @@ openrouter_api_key: "sk-test-123"
 
     #[test]
     fn test_from_file_with_custom_fields() {
-        let _guard = ENV_MUTEX.lock().unwrap();
         clear_config_env();
 
         let yaml = r#"
@@ -116,7 +109,6 @@ embedding_dimension: 768
 
     #[test]
     fn test_env_var_overrides_file() {
-        let _guard = ENV_MUTEX.lock().unwrap();
         clear_config_env();
 
         let yaml = r#"

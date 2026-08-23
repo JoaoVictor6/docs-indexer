@@ -13,20 +13,20 @@ pub fn create_pool(config: &Config) -> anyhow::Result<PgPool> {
 }
 
 pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
-    sqlx::query(include_str!("../../infra/migrations/001_create_projects.sql"))
-        .execute(pool)
-        .await
-        .context("failed to run migration 001")?;
+    let migrations = [
+        ("001", include_str!("../../infra/migrations/001_create_projects.sql")),
+        ("002", include_str!("../../infra/migrations/002_create_documents.sql")),
+        ("003", include_str!("../../infra/migrations/003_create_chunks.sql")),
+    ];
 
-    sqlx::query(include_str!("../../infra/migrations/002_create_documents.sql"))
-        .execute(pool)
-        .await
-        .context("failed to run migration 002")?;
-
-    sqlx::query(include_str!("../../infra/migrations/003_create_chunks.sql"))
-        .execute(pool)
-        .await
-        .context("failed to run migration 003")?;
+    for (name, sql) in &migrations {
+        for statement in sql.split(';').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+            sqlx::query(statement)
+                .execute(pool)
+                .await
+                .with_context(|| format!("failed to run migration {name}: {statement:.80}..."))?;
+        }
+    }
 
     Ok(())
 }

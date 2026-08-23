@@ -1,0 +1,2 @@
+database_url: "postgres://docsindexer:docsindexer@localhost:5432/docsindexer"
+openrouter_api_key: "sk-or-v1-placeholder"

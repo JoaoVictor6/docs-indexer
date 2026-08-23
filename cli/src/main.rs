@@ -1,4 +1,5 @@
 mod chunker;
+mod commands;
 mod config;
 mod db;
 mod embedding;
@@ -6,15 +7,16 @@ mod models;
 mod openrouter;
 mod scanner;
 
+use anyhow::Context;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use tracing_subscriber::filter::EnvFilter;
 
 #[derive(Parser)]
 #[command(
     name = "docs-indexer",
     version,
-    about = "Semantic documentation indexer for AI agents",
-    long_about = "Scans documentation repositories, chunks Markdown files, generates embeddings via OpenRouter, and persists them to PostgreSQL + pgVector."
+    about = "Semantic documentation indexer for AI agents"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -25,53 +27,93 @@ pub struct Cli {
 pub enum Command {
     /// Index documentation files into pgVector
     Index {
-        /// Project name (must match a registered project)
         #[arg(long)]
         project: String,
 
-        /// Root directory of the documentation repository
         #[arg(long)]
         repository: PathBuf,
 
-        /// Specific files to index (relative to repository root). If omitted, all .md/.mdx files are scanned.
         #[arg(long, num_args = 1..)]
         files: Option<Vec<PathBuf>>,
 
-        /// Commit SHA of the main branch version being indexed
         #[arg(long)]
         commit_sha: Option<String>,
     },
     /// Delete indexed files for a project
     Delete {
-        /// Project name
         #[arg(long)]
         project: String,
 
-        /// Files to remove from the index (relative paths from repository root)
         #[arg(long, num_args = 1..)]
         files: Vec<PathBuf>,
     },
-    /// Rebuild the entire index for a project (deletes all chunks, then re-indexes)
+    /// Rebuild the entire index for a project
     Rebuild {
-        /// Project name
         #[arg(long)]
         project: String,
 
-        /// Root directory of the documentation repository
         #[arg(long)]
         repository: PathBuf,
 
-        /// Commit SHA of the main branch version being indexed
         #[arg(long)]
         commit_sha: Option<String>,
     },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .init();
+
     let cli = Cli::parse();
-    match &cli.command {
-        Command::Index { project, .. } => println!("Command: index (project: {})", project),
-        Command::Delete { project, .. } => println!("Command: delete (project: {})", project),
-        Command::Rebuild { project, .. } => println!("Command: rebuild (project: {})", project),
+
+    let config = config::Config::from_file(&PathBuf::from("config.yaml"))
+        .context("failed to load configuration")?;
+
+    let pool = db::create_pool(&config)?;
+    db::run_migrations(&pool).await?;
+
+    let provider = openrouter::OpenRouterProvider::new(&config);
+
+    match cli.command {
+        Command::Index {
+            project,
+            repository,
+            files,
+            commit_sha,
+        } => {
+            let files_ref: Option<Vec<PathBuf>> = files;
+            commands::index::run(
+                &pool,
+                &provider,
+                &config,
+                &project,
+                &repository,
+                files_ref.as_deref(),
+                commit_sha.as_deref(),
+            )
+            .await?;
+        }
+        Command::Delete { project, files } => {
+            commands::delete::run(&pool, &project, &files).await?;
+        }
+        Command::Rebuild {
+            project,
+            repository,
+            commit_sha,
+        } => {
+            commands::rebuild::run(
+                &pool,
+                &provider,
+                &config,
+                &project,
+                &repository,
+                commit_sha.as_deref(),
+            )
+            .await?;
+        }
     }
+
+    Ok(())
 }

@@ -1,14 +1,6 @@
-mod chunker;
-mod commands;
-mod config;
-mod db;
-mod embedding;
-mod models;
-mod openrouter;
-mod scanner;
-
 use anyhow::Context;
 use clap::{Parser, Subcommand};
+use docs_indexer::{commands, config, db, openrouter};
 use std::path::PathBuf;
 use tracing_subscriber::filter::EnvFilter;
 

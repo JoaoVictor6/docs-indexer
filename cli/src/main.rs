@@ -4,6 +4,7 @@ mod db;
 mod embedding;
 mod models;
 mod openrouter;
+mod scanner;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

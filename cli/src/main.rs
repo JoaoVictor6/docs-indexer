@@ -1,6 +1,8 @@
 mod chunker;
 mod config;
+mod db;
 mod embedding;
+mod models;
 mod openrouter;
 
 use clap::{Parser, Subcommand};

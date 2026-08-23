@@ -43,14 +43,15 @@ Copy `.env.example` to `.env` and fill in your credentials.
     .unwrap();
 }
 
-fn load_config() -> Config {
-    let _ = dotenvy::dotenv();
+fn load_config() -> Option<Config> {
+    let _ = dotenvy::dotenv().ok();
 
-    Config {
-        database_url: std::env::var("DATABASE_URL")
-            .expect("DATABASE_URL must be set for integration tests"),
-        openrouter_api_key: std::env::var("OPENROUTER_API_KEY")
-            .expect("OPENROUTER_API_KEY must be set for integration tests"),
+    let database_url = std::env::var("DATABASE_URL").ok()?;
+    let openrouter_key = std::env::var("OPENROUTER_API_KEY").ok()?;
+
+    Some(Config {
+        database_url,
+        openrouter_api_key: openrouter_key,
         openrouter_base_url: std::env::var("OPENROUTER_BASE_URL")
             .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string()),
         embedding_model: std::env::var("EMBEDDING_MODEL")
@@ -59,7 +60,7 @@ fn load_config() -> Config {
             .unwrap_or_else(|_| "1536".to_string())
             .parse()
             .expect("EMBEDDING_DIMENSION must be an integer"),
-    }
+    })
 }
 
 #[tokio::test]
@@ -82,7 +83,13 @@ async fn test_chunker_on_fixture_documents() {
 
 #[tokio::test]
 async fn test_full_index_pipeline_idempotency_delete_rebuild() {
-    let config = load_config();
+    let config = match load_config() {
+        Some(c) => c,
+        None => {
+            eprintln!("skipping integration test: DATABASE_URL or OPENROUTER_API_KEY not set");
+            return;
+        }
+    };
     let pool = db::create_pool(&config).expect("should create pool");
     db::run_migrations(&pool)
         .await

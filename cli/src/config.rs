@@ -60,12 +60,23 @@ impl Config {
 mod tests {
     use super::*;
     use std::io::Write;
+    use std::sync::Mutex;
     use tempfile::NamedTempFile;
+
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
+
+    fn clear_config_env() {
+        std::env::remove_var("DATABASE_URL");
+        std::env::remove_var("OPENROUTER_API_KEY");
+        std::env::remove_var("OPENROUTER_BASE_URL");
+        std::env::remove_var("EMBEDDING_MODEL");
+        std::env::remove_var("EMBEDDING_DIMENSION");
+    }
 
     #[test]
     fn test_from_file_basic() {
-        std::env::remove_var("OPENROUTER_API_KEY");
-        std::env::remove_var("EMBEDDING_DIMENSION");
+        let _guard = ENV_MUTEX.lock().unwrap();
+        clear_config_env();
 
         let yaml = r#"
 database_url: "postgres://localhost/test"
@@ -84,7 +95,8 @@ openrouter_api_key: "sk-test-123"
 
     #[test]
     fn test_from_file_with_custom_fields() {
-        std::env::remove_var("EMBEDDING_DIMENSION");
+        let _guard = ENV_MUTEX.lock().unwrap();
+        clear_config_env();
 
         let yaml = r#"
 database_url: "postgres://localhost/test"
@@ -104,6 +116,9 @@ embedding_dimension: 768
 
     #[test]
     fn test_env_var_overrides_file() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        clear_config_env();
+
         let yaml = r#"
 database_url: "postgres://localhost/test"
 openrouter_api_key: "sk-file-key"
@@ -117,9 +132,6 @@ openrouter_api_key: "sk-file-key"
         let config = Config::from_file(file.path()).unwrap();
         assert_eq!(config.openrouter_api_key, "sk-env-key");
         assert_eq!(config.embedding_dimension, 3072);
-
-        std::env::remove_var("OPENROUTER_API_KEY");
-        std::env::remove_var("EMBEDDING_DIMENSION");
     }
 
     #[test]

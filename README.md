@@ -70,33 +70,22 @@ Configuration is loaded from a YAML file (`config.yaml` by default). All values 
 
 The default model is `text-embedding-3-small` (1536 dimensions), and the database migration includes a working `ivfflat` ANN index. This gives fast vector search out of the box.
 
-### Model Dimensions and ANN Indexes
+### The Constraint
 
-pgVector's `ivfflat` index has a hard limit of **2000 dimensions**. Models with >2000 dimensions (e.g. `qwen3-embedding-8b` = 4096d) are incompatible with accelerated vector search on PostgreSQL — searches fall back to **exact (brute-force) cosine distance**:
+pgVector's `ivfflat` index has a hard limit of **2000 dimensions**. Our default model (`text-embedding-3-small` = 1536d) fits comfortably. If you switch to a model exceeding 2000 dimensions (e.g. `qwen3-embedding-8b` = 4096d), the `ivfflat` index creation will fail. You must migrate to a different indexing strategy:
 
-| Scale | Exact Search | ivfflat Index |
-|---|---|---|
-| ~10k chunks | <10ms per query | <1ms |
-| ~100k chunks | ~100ms | <5ms |
-| ~1M chunks | ~1s | <20ms |
-| ~10M chunks | >10s | <50ms |
-
-For a prototype or small org (<50k chunks), brute force is fine. For production at scale, you need an index.
-
-### Solutions
+### Migration Paths (>2000-dim models)
 
 | Solution | Effort | Trade-offs |
 |---|---|---|
-| **1. Use a ≤2000-dim model** (e.g. `text-embedding-3-small` = 1536d, `voyage-3-lite` = 512d) | Minimal — change `.env` + rebuild | Lower-dim models may have slightly worse retrieval quality. Run evaluation on your data. |
-| **2. HNSW via pgvector 0.8+** (`hnsw` index has no 2000-dim limit) | Medium — upgrade pgvector, modify migration | Still experimental in pgvector 0.8+. Monitor PostgreSQL memory usage (HNSW is memory-heavy). |
-| **3. Dimensionality reduction** (PCA/projection 4096→1536 before storing) | Medium — add preprocessing step to the indexer pipeline | Lossy. Evaluate recall@k degradation on your data before committing. |
-| **4. Brute force (no index)** | Zero | Works well up to ~50k vectors. Exact results, no index build time. Acceptable for single-org or small multi-project deployments. |
-| **5. External vector store** (Qdrant, Milvus, Pinecone) for the embedding column | High — adds infrastructure | Full ANN support for any dimension. Adds operational complexity. |
-| **6. Hybrid: brute force + project-level pre-filtering** | Low — application-level optimization | If searches filter by `project_id` first, the brute-force pool shrinks significantly. Combine with connection pooling. |
+| **1. Use a ≤2000-dim model** (recommended) | Minimal — change `.env` + rebuild | Simplest path. Keeps ivfflat. Evaluate recall quality on your data. |
+| **2. HNSW index** (pgvector 0.8+, no 2000-dim limit) | Medium — upgrade pgvector, modify migration | Solves the dimensionality constraint. Experimental in pgvector 0.8+. Monitor memory usage (HNSW is memory-heavy). |
+| **3. Dimensionality reduction** (PCA/projection before storing) | Medium — add preprocessing step to the pipeline | Lossy. Evaluate recall@k degradation before committing. |
+| **4. External vector store** (Qdrant, Milvus, Pinecone) | High — adds infrastructure | Full ANN support for any dimension. Adds operational complexity. |
 
 ### Current State
 
-The default migration uses `vector(1536)` with the `ivfflat` ANN index — vector search is accelerated by default. If you switch to a model with >2000 dimensions, the index creation will fail; in that case, remove the ivfflat index from the migration and fall back to brute force (exact) search. As the index grows, evaluate which solution fits your scale and latency requirements.
+The default migration uses `vector(1536)` with the `ivfflat` ANN index — vector search is accelerated by default. All queries use ANN; there is no brute-force fallback.
 
 ### Recommendation by Scale
 
@@ -106,9 +95,8 @@ The default migration uses `vector(1536)` with the `ivfflat` ANN index — vecto
 | Single team (≤100k chunks) | Default setup — ivfflat scales well here |
 | Multi-team org (≤1M chunks) | Default setup — increase `lists` parameter |
 | Platform (≥10M chunks) | External vector store or HNSW when stable |
-| Any scale with >2000-dim model | See solutions 1-6 above |
 
-> **Rule of thumb:** ivfflat handles the common scale well. If switching to a >2000-dim model, you'll need an alternative index strategy — see solutions above.
+> **Rule of thumb:** ivfflat handles common scales well. Increase `lists` as the dataset grows. If you need a >2000-dim model, pick a migration path from the table above.
 
 ## Development
 

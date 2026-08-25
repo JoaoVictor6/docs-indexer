@@ -8,3 +8,6 @@ target/
 .DS_Store
 config.yaml
 cli/Cargo.lock
+
+node_modules/
+api/.env

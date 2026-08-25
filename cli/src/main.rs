@@ -11,6 +11,10 @@ use tracing_subscriber::filter::EnvFilter;
     about = "Semantic documentation indexer for AI agents"
 )]
 pub struct Cli {
+    /// Output logs as JSON (one JSON object per line)
+    #[arg(long, global = true)]
+    pub log_json: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }
@@ -56,11 +60,20 @@ pub enum Command {
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
-
     let cli = Cli::parse();
+
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
+
+    if cli.log_json {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .json()
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .init();
+    }
 
     let config = config::Config::from_file(&PathBuf::from("config.yaml"))
         .context("failed to load configuration")?;

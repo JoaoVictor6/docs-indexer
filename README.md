@@ -44,6 +44,47 @@ cargo run -- delete --project my-project --files docs/old.md
 cargo run -- rebuild --project my-project --repository /path/to/docs
 ```
 
+## API Server
+
+A REST API (Bun + Elysia + TypeScript) that serves the search index.
+
+### Running
+
+```bash
+cd api
+cp .env.example .env
+# Edit .env with your OpenRouter API key
+bun install
+bun run dev
+```
+
+### Endpoints
+
+| Method | Path | Query Params | Description |
+|---|---|---|---|
+| GET | `/search` | `q` (required), `project` (optional), `limit` (optional, default 10) | Semantic search returning ranked results |
+| GET | `/openapi` | — | Interactive API docs (Scalar UI) |
+| GET | `/openapi/json` | — | Raw OpenAPI spec |
+
+Example:
+
+```bash
+curl "http://localhost:3000/search?q=authentication&project=payments&limit=10"
+```
+
+Response (JSON array, ordered by similarity descending):
+
+```json
+[
+  {
+    "chunk": "All API calls must include a bearer token...",
+    "path": "docs/auth.md",
+    "project": "payments",
+    "similarity": 0.92
+  }
+]
+```
+
 ## Configuration
 
 Configuration is loaded from a YAML file (`config.yaml` by default). All values can be overridden by environment variables — secrets must never be committed.

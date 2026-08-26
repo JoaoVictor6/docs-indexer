@@ -1,12 +1,12 @@
 import { Elysia } from "elysia";
 import { openapi } from "@elysia/openapi";
-import { getConfig, type AppConfig } from "./config";
+import { getConfig } from "./config";
 import { createPool, type Sql } from "./db";
 import { createEmbeddingClient, type EmbeddingClient } from "./embedding";
 import { createSearchRoute } from "./routes/search";
 import { authPlugin } from "./auth";
 
-export function buildApp(config: AppConfig, sql: Sql, embeddingClient: EmbeddingClient): Elysia {
+export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
   const searchRoute = createSearchRoute(sql, embeddingClient);
 
   return new Elysia()
@@ -28,7 +28,7 @@ if (import.meta.main) {
   const sql = createPool(config);
   const embeddingClient = createEmbeddingClient(config);
 
-  buildApp(config, sql, embeddingClient).listen(config.port);
+  buildApp(sql, embeddingClient).listen(config.port);
 
   console.log(`docs-indexer API listening on port ${config.port}`);
 }

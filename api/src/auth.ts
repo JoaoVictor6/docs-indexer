@@ -8,6 +8,6 @@ export const authPlugin = new Elysia({ name: "auth" }).derive(({ headers }) => {
       authenticated: authorization !== undefined,
       // When real auth is implemented, parse the JWT/bearer token here
       // and populate: userId, projectPermissions, roles, etc.
-    } as Record<string, unknown>,
+    },
   };
 });

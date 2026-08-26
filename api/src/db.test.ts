@@ -10,11 +10,11 @@ describe("createPool", () => {
     port: 3000,
   };
 
-  it("returns a sql instance when given a valid config", () => {
+  it("returns a sql instance when given a valid config", async () => {
     const sql = createPool(config);
     expect(sql).toBeDefined();
     expect(typeof sql).toBe("function");
-    sql.end();
+    await sql.end();
   });
 
   it("creates a pool that can query the database", async () => {

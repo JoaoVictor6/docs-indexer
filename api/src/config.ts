@@ -5,7 +5,7 @@ const envSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1),
   OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   EMBEDDING_MODEL: z.string().min(1).default("openai/text-embedding-3-small"),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 });
 
 export interface AppConfig {

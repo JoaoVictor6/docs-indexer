@@ -1,6 +1,8 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, it, expect, afterEach, mock } from "bun:test";
 import { createEmbeddingClient } from "./embedding";
 import type { AppConfig } from "./config";
+
+const originalFetch = globalThis.fetch;
 
 describe("EmbeddingClient", () => {
   const config: AppConfig = {
@@ -10,6 +12,10 @@ describe("EmbeddingClient", () => {
     embeddingModel: "openai/text-embedding-3-small",
     port: 3000,
   };
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
 
   it("calls OpenRouter and returns an embedding vector", async () => {
     const client = createEmbeddingClient(config);
@@ -33,6 +39,7 @@ describe("EmbeddingClient", () => {
           Authorization: "Bearer sk-test",
           "Content-Type": "application/json",
         }),
+        body: JSON.stringify({ model: "openai/text-embedding-3-small", input: ["hello world"] }),
       })
     );
   });

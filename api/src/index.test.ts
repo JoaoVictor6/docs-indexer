@@ -14,17 +14,9 @@ function createMockEmbeddingClient(): EmbeddingClient {
   };
 }
 
-const config = {
-  databaseUrl: "postgres://localhost/db",
-  openrouterApiKey: "sk-test",
-  openrouterBaseUrl: "https://openrouter.ai/api/v1",
-  embeddingModel: "openai/text-embedding-3-small",
-  port: 3000,
-};
-
 describe("app with OpenAPI", () => {
   it("serves the OpenAPI JSON spec at /openapi/json", async () => {
-    const app = buildApp(config, createMockSql(), createMockEmbeddingClient());
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
     const response = await app.handle(new Request("http://localhost/openapi/json"));
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -33,7 +25,7 @@ describe("app with OpenAPI", () => {
   });
 
   it("documents the /search query parameters", async () => {
-    const app = buildApp(config, createMockSql(), createMockEmbeddingClient());
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
     const response = await app.handle(new Request("http://localhost/openapi/json"));
     const body = await response.json();
     const searchOp = body.paths["/search"].get;
@@ -45,7 +37,7 @@ describe("app with OpenAPI", () => {
   });
 
   it("serves the OpenAPI UI at /openapi", async () => {
-    const app = buildApp(config, createMockSql(), createMockEmbeddingClient());
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
     const response = await app.handle(new Request("http://localhost/openapi"));
     expect(response.status).toBe(200);
   });

@@ -33,8 +33,7 @@ class OpenRouterEmbeddingClient implements EmbeddingClient {
     });
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`OpenRouter returned ${response.status}: ${body}`);
+      throw new Error(`OpenRouter returned ${response.status}`);
     }
 
     const result = (await response.json()) as {

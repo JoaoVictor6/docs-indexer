@@ -51,12 +51,14 @@ describe("search integration (end-to-end)", () => {
       DO UPDATE SET text = EXCLUDED.text, embedding = EXCLUDED.embedding
     `;
 
-    app = buildApp(config, sql, embeddingClient);
+    app = buildApp(sql, embeddingClient);
   });
 
   afterAll(async () => {
-    await sql`DELETE FROM projects WHERE name = ${TEST_PROJECT}`;
-    await sql.end();
+    if (sql) {
+      await sql`DELETE FROM projects WHERE name = ${TEST_PROJECT}`;
+      await sql.end();
+    }
   });
 
   it("returns the seeded document when searching for related terms", async () => {

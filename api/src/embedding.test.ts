@@ -20,7 +20,7 @@ describe("EmbeddingClient", () => {
         { status: 200, headers: { "Content-Type": "application/json" } }
       ))
     );
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const embedding = await client.embed("hello world");
     expect(embedding).toEqual([0.1, 0.2, 0.3]);
@@ -42,7 +42,7 @@ describe("EmbeddingClient", () => {
 
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response("unauthorized", { status: 401 }))
-    );
+    ) as unknown as typeof fetch;
 
     await expect(client.embed("hello")).rejects.toThrow("OpenRouter returned 401");
   });
@@ -55,7 +55,7 @@ describe("EmbeddingClient", () => {
         JSON.stringify({ data: [] }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       ))
-    );
+    ) as unknown as typeof fetch;
 
     await expect(client.embed("hello")).rejects.toThrow("no embeddings");
   });

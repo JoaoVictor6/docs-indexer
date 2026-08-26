@@ -136,7 +136,7 @@ content comes directly from the `main` branch of the project's Git repository.
 ```bash
 cd mcp
 bun test               # full suite (integration tests need live Postgres + OpenRouter key)
-bun test src/          # unit tests only (mock-based, no network)
+bun test src/          # unit tests only (mock-based; db test needs Postgres)
 bun test tests/        # integration test only (requires Docker + OpenRouter key)
 ```
 

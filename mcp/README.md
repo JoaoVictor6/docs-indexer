@@ -18,7 +18,7 @@ Semantic search (OpenRouter embedding → pgVector)
 AI Agent picks a document
    │  get_document(project, path)
    ▼
-Git provider (raw.githubusercontent.com, branch `main`)
+Git provider (GitHub / Bitbucket, branch `main`)
    │  full document content
    ▼
 AI Agent gets trusted, up-to-date context
@@ -38,7 +38,7 @@ Two tools are exposed:
 - **Indexed documentation** (run the Rust CLI first — see the repo root `README.md` "Quick Start")
 - **Bun** (`https://bun.sh`) as the runtime
 - A valid **OpenRouter API key**
-- A **GitHub token** (used to read private repositories; for public repos any token works. Use the format `username:token`)
+- An **SCM token** (used to read private repositories via HTTP Basic auth. Both GitHub and Bitbucket are supported. Format: `username:token` or `username:app-password`)
 
 ## Configuration
 
@@ -158,8 +158,7 @@ The following gaps are known and intentionally out of scope for the MVP:
    Without it, `get_document` fails with
    `repository_url is not set for project '<name>'`.
 
-2. **Only GitHub is supported** for source-of-truth retrieval (GitLab is a
-   future provider — see the `GitProvider` interface in `src/git.ts`).
+2. **GitLab is not yet supported** (see the `GitProvider` interface in `src/git.ts`).
 
 3. **Authorization is not yet enforced per-project.** The server trusts its
    environment (see PRD sections 27–28 for the planned model).

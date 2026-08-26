@@ -23,10 +23,12 @@ export function buildApp(config: AppConfig, sql: Sql, embeddingClient: Embedding
     .use(searchRoute) as unknown as Elysia;
 }
 
-const config = getConfig();
-const sql = createPool(config);
-const embeddingClient = createEmbeddingClient(config);
+if (import.meta.main) {
+  const config = getConfig();
+  const sql = createPool(config);
+  const embeddingClient = createEmbeddingClient(config);
 
-buildApp(config, sql, embeddingClient).listen(config.port);
+  buildApp(config, sql, embeddingClient).listen(config.port);
 
-console.log(`docs-indexer API listening on port ${config.port}`);
+  console.log(`docs-indexer API listening on port ${config.port}`);
+}

@@ -31,7 +31,7 @@ openrouter_api_key: "sk-or-v1-your-key"' > config.yaml
 docker compose -f infra/docker-compose.yml up -d
 
 # 4. Index documentation
-cargo run -- index --project my-project --repository /path/to/docs --commit_sha $(git rev-parse HEAD)
+cargo run -- index --project my-project --repository /path/to/docs --commit-sha $(git rev-parse HEAD)
 
 # 5. Index specific files (CI after merge)
 cargo run -- index --project my-project --repository /path/to/docs \

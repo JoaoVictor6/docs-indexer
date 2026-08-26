@@ -187,6 +187,19 @@ projects  ──< documents  ──< chunks
 ```
 ├── .env.example              # Environment template
 ├── .github/workflows/ci.yml  # CI: unit tests + Docker build
+├── api/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── src/
+│   │   ├── index.ts          # App entry point + OpenAPI plugin
+│   │   ├── config.ts         # Zod-validated env config (fail-fast)
+│   │   ├── db.ts             # PostgreSQL connection pool (postgres.js)
+│   │   ├── embedding.ts      # OpenRouter embedding client
+│   │   ├── auth.ts           # No-op auth plugin (seam for future)
+│   │   └── routes/
+│   │       └── search.ts     # GET /search — pgvector cosine similarity
+│   └── tests/
+│       └── search.integration.test.ts
 ├── cli/
 │   ├── Cargo.toml
 │   ├── src/

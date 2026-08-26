@@ -50,16 +50,26 @@ export interface RepositoryUrl {
 }
 
 export function parseRepositoryUrl(repositoryUrl: string): RepositoryUrl {
-  const match = repositoryUrl.match(
-    /^(?:https?:\/\/)?(github\.com|bitbucket\.org)[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/
+  const httpsMatch = repositoryUrl.match(
+    /^(?:https?:\/\/)(github\.com|bitbucket\.org)\/([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/
   );
-  if (!match) {
-    throw new Error(
-      `Unsupported repository URL: ${repositoryUrl}; ` +
-        `only github.com and bitbucket.org repositories are supported`
-    );
+  if (httpsMatch) {
+    const [, host, owner, repo] = httpsMatch;
+    const provider = host === "github.com" ? "github" : "bitbucket";
+    return { provider, owner, repo };
   }
-  const [, host, owner, repo] = match;
-  const provider = host === "github.com" ? "github" : "bitbucket";
-  return { provider, owner, repo };
+
+  const sshMatch = repositoryUrl.match(
+    /^git@(github\.com):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
+  );
+  if (sshMatch) {
+    const [, host, owner, repo] = sshMatch;
+    const provider = host === "github.com" ? "github" : "bitbucket";
+    return { provider, owner, repo };
+  }
+
+  throw new Error(
+    `Unsupported repository URL: ${repositoryUrl}; ` +
+      `Only github.com and bitbucket.org repositories are supported`
+  );
 }

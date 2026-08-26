@@ -35,6 +35,16 @@ describe("parseRepositoryUrl", () => {
     expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
   });
 
+  it("parses a GitHub SSH URL with .git suffix", () => {
+    const result = parseRepositoryUrl("git@github.com:acme/payments-docs.git");
+    expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a GitHub SSH URL without .git suffix", () => {
+    const result = parseRepositoryUrl("git@github.com:acme/payments-docs");
+    expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
+  });
+
   it("parses owners with hyphens and dots", () => {
     const result = parseRepositoryUrl("https://github.com/my-org.prefix/payments-docs.git");
     expect(result).toEqual({ provider: "github", owner: "my-org.prefix", repo: "payments-docs" });
@@ -42,25 +52,25 @@ describe("parseRepositoryUrl", () => {
 
   it("throws for unsupported domain (gitlab)", () => {
     expect(() => parseRepositoryUrl("https://gitlab.com/acme/payments-docs.git")).toThrow(
-      "only github.com and bitbucket.org repositories are supported"
+      "Only github.com and bitbucket.org repositories are supported"
     );
   });
 
   it("throws for unsupported domain (custom)", () => {
     expect(() => parseRepositoryUrl("https://example.com/acme/payments-docs.git")).toThrow(
-      "only github.com and bitbucket.org repositories are supported"
+      "Only github.com and bitbucket.org repositories are supported"
     );
   });
 
   it("throws for invalid URL format (no owner/repo)", () => {
     expect(() => parseRepositoryUrl("https://github.com")).toThrow(
-      "only github.com and bitbucket.org repositories are supported"
+      "Only github.com and bitbucket.org repositories are supported"
     );
   });
 
   it("throws for empty string", () => {
     expect(() => parseRepositoryUrl("")).toThrow(
-      "only github.com and bitbucket.org repositories are supported"
+      "Only github.com and bitbucket.org repositories are supported"
     );
   });
 });
@@ -112,7 +122,7 @@ describe("GitProvider (GitHub)", () => {
 
     await expect(
       provider.getDocument("https://gitlab.com/acme/payments-docs.git", "main", "docs/auth.md")
-    ).rejects.toThrow("only github.com and bitbucket.org repositories are supported");
+    ).rejects.toThrow("Only github.com and bitbucket.org repositories are supported");
   });
 
   it("throws when the repository URL is a Bitbucket URL", async () => {

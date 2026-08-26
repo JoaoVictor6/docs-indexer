@@ -101,7 +101,7 @@ describe("GitProvider (GitHub)", () => {
       "https://raw.githubusercontent.com/acme/payments-docs/main/docs/authentication.md",
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: "Bearer ghp-test",
+          Authorization: "Basic Z2hwLXRlc3Q=",
         }),
       })
     );

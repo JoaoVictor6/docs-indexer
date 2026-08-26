@@ -27,7 +27,7 @@ class GitHubGitProvider implements GitProvider {
     const response = await fetch(rawUrl, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Basic ${btoa(this.token)}`,
         Accept: "application/vnd.github.raw+json",
       },
     });

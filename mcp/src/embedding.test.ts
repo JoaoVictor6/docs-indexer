@@ -1,0 +1,57 @@
+import { describe, it, expect, afterEach, mock } from "bun:test";
+import { createEmbeddingClient } from "./embedding";
+import type { McpConfig } from "./config";
+
+const originalFetch = globalThis.fetch;
+
+describe("EmbeddingClient", () => {
+  const config: McpConfig = {
+    databaseUrl: "postgres://localhost/db",
+    openrouterApiKey: "sk-test",
+    openrouterBaseUrl: "https://openrouter.ai/api/v1",
+    embeddingModel: "openai/text-embedding-3-small",
+    githubToken: "ghp-test",
+    githubBaseUrl: "https://raw.githubusercontent.com",
+  };
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("calls OpenRouter and returns an embedding vector", async () => {
+    const client = createEmbeddingClient(config);
+
+    const fetchMock = mock(() =>
+      Promise.resolve(new Response(
+        JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ))
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const embedding = await client.embed("hello world");
+    expect(embedding).toEqual([0.1, 0.2, 0.3]);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://openrouter.ai/api/v1/embeddings",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-test",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ model: "openai/text-embedding-3-small", input: ["hello world"] }),
+      })
+    );
+  });
+
+  it("throws when OpenRouter returns a non-2xx status", async () => {
+    const client = createEmbeddingClient(config);
+
+    globalThis.fetch = mock(() =>
+      Promise.resolve(new Response("unauthorized", { status: 401 }))
+    ) as unknown as typeof fetch;
+
+    await expect(client.embed("hello")).rejects.toThrow("OpenRouter returned 401");
+  });
+});

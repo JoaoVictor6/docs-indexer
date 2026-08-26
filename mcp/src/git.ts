@@ -3,7 +3,25 @@ export interface GitProvider {
 }
 
 export function createGitProvider(scmToken: string): GitProvider {
-  return new GitHubGitProvider(scmToken);
+  const github = new GitHubGitProvider(scmToken);
+  const bitbucket = new BitbucketGitProvider(scmToken);
+
+  return {
+    async getDocument(repositoryUrl: string, branch: string, path: string): Promise<string> {
+      const repo = parseRepositoryUrl(repositoryUrl);
+      switch (repo.provider) {
+        case "github":
+          return github.getDocument(repositoryUrl, branch, path);
+        case "bitbucket":
+          return bitbucket.getDocument(repositoryUrl, branch, path);
+        default:
+          throw new Error(
+            `Unsupported provider "${(repo as any).provider}". ` +
+              `Only github.com and bitbucket.org repositories are supported.`
+          );
+      }
+    },
+  };
 }
 
 class GitHubGitProvider implements GitProvider {

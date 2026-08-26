@@ -115,12 +115,32 @@ describe("GitProvider (GitHub)", () => {
     ).rejects.toThrow("Only github.com and bitbucket.org repositories are supported");
   });
 
-  it("throws when the repository URL is a Bitbucket URL", async () => {
-    const provider = createGitProvider("ghp-test");
+  it("routes Bitbucket URLs to BitbucketGitProvider", async () => {
+    const provider = createGitProvider("bbp-test");
 
-    await expect(
-      provider.getDocument("https://bitbucket.org/acme/payments-docs.git", "main", "docs/auth.md")
-    ).rejects.toThrow("Only GitHub repositories are supported");
+    const fetchMock = mock(() =>
+      Promise.resolve(new Response("# Bitbucket docs", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }))
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const content = await provider.getDocument(
+      "https://bitbucket.org/acme/payments-docs.git",
+      "main",
+      "docs/auth.md"
+    );
+
+    expect(content).toBe("# Bitbucket docs");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://bitbucket.org/acme/payments-docs/raw/main/docs/auth.md",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Basic YmJwLXRlc3Q=",
+        }),
+      })
+    );
   });
 
   it("throws when the fetch returns non-2xx", async () => {
@@ -133,6 +153,84 @@ describe("GitProvider (GitHub)", () => {
     await expect(
       provider.getDocument("https://github.com/acme/payments-docs.git", "main", "docs/missing.md")
     ).rejects.toThrow("404");
+  });
+});
+
+describe("createGitProvider factory dispatch", () => {
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("routes GitHub URL to GitHub provider (raw.githubusercontent.com)", async () => {
+    const provider = createGitProvider("ghp-test");
+
+    const fetchMock = mock(() =>
+      Promise.resolve(new Response("# GitHub routed", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }))
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const content = await provider.getDocument(
+      "https://github.com/acme/payments-docs.git",
+      "main",
+      "docs/readme.md"
+    );
+
+    expect(content).toBe("# GitHub routed");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://raw.githubusercontent.com/acme/payments-docs/main/docs/readme.md",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Basic Z2hwLXRlc3Q=",
+        }),
+      })
+    );
+  });
+
+  it("routes Bitbucket URL to Bitbucket provider (bitbucket.org/.../raw/...)", async () => {
+    const provider = createGitProvider("bbp-test");
+
+    const fetchMock = mock(() =>
+      Promise.resolve(new Response("# Bitbucket routed", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }))
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const content = await provider.getDocument(
+      "https://bitbucket.org/acme/payments-docs.git",
+      "main",
+      "docs/readme.md"
+    );
+
+    expect(content).toBe("# Bitbucket routed");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://bitbucket.org/acme/payments-docs/raw/main/docs/readme.md",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Basic YmJwLXRlc3Q=",
+        }),
+      })
+    );
+  });
+
+  it("throws for unknown domain listing github.com and bitbucket.org as supported", async () => {
+    const provider = createGitProvider("token");
+
+    await expect(
+      provider.getDocument("https://gitlab.com/acme/payments-docs.git", "main", "docs/auth.md")
+    ).rejects.toThrow("Only github.com and bitbucket.org repositories are supported");
+  });
+
+  it("throws for custom domain listing github.com and bitbucket.org", async () => {
+    const provider = createGitProvider("token");
+
+    await expect(
+      provider.getDocument("https://example.com/acme/payments-docs.git", "main", "docs/auth.md")
+    ).rejects.toThrow("Only github.com and bitbucket.org repositories are supported");
   });
 });
 

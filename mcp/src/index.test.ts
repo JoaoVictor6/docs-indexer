@@ -27,8 +27,7 @@ const config: McpConfig = {
   openrouterApiKey: "sk-test",
   openrouterBaseUrl: "https://openrouter.ai/api/v1",
   embeddingModel: "openai/text-embedding-3-small",
-  githubToken: "ghp-test",
-  githubBaseUrl: "https://raw.githubusercontent.com",
+  scmToken: "ghp-test",
 };
 
 describe("buildMcpServer", () => {

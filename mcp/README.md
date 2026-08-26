@@ -38,7 +38,7 @@ Two tools are exposed:
 - **Indexed documentation** (run the Rust CLI first — see the repo root `README.md` "Quick Start")
 - **Bun** (`https://bun.sh`) as the runtime
 - A valid **OpenRouter API key**
-- A **GitHub token** (used to read private repositories; for public repos any token works)
+- A **GitHub token** (used to read private repositories; for public repos any token works. Use the format `username:token`)
 
 ## Configuration
 
@@ -55,8 +55,7 @@ cp .env.example .env
 | `OPENROUTER_API_KEY` | yes | — | OpenRouter API key for query embeddings |
 | `OPENROUTER_BASE_URL` | yes | `https://openrouter.ai/api/v1` | OpenRouter base URL |
 | `EMBEDDING_MODEL` | yes | `openai/text-embedding-3-small` | Embedding model (must match what the indexer used) |
-| `GITHUB_TOKEN` | yes | — | GitHub token for reading repositories |
-| `GITHUB_BASE_URL` | yes | `https://raw.githubusercontent.com` | Raw content base URL |
+| `SCM_TOKEN` | yes | — | SCM token for reading repositories (format: `username:token`) |
 
 > **Note:** `get_document` requires each project to have a `repository_url` set in
 > the `projects` table. The indexer CLI does not yet populate this automatically —
@@ -92,7 +91,7 @@ Add to `claude_desktop_config.json`:
       "env": {
         "DATABASE_URL": "postgres://docsindexer:docsindexer@localhost:5432/docsindexer",
         "OPENROUTER_API_KEY": "sk-or-v1-...",
-        "GITHUB_TOKEN": "ghp_..."
+        "SCM_TOKEN": "username:token"
       }
     }
   }

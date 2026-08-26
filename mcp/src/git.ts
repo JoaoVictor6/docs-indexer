@@ -1,20 +1,17 @@
-import type { McpConfig } from "./config";
-
 export interface GitProvider {
   getDocument(repositoryUrl: string, branch: string, path: string): Promise<string>;
 }
 
-export function createGitProvider(config: McpConfig): GitProvider {
-  return new GitHubGitProvider(config);
+export function createGitProvider(scmToken: string): GitProvider {
+  return new GitHubGitProvider(scmToken);
 }
 
 class GitHubGitProvider implements GitProvider {
   private token: string;
-  private baseUrl: string;
+  private readonly baseUrl = "https://raw.githubusercontent.com";
 
-  constructor(config: McpConfig) {
-    this.token = config.githubToken;
-    this.baseUrl = config.githubBaseUrl;
+  constructor(scmToken: string) {
+    this.token = scmToken;
   }
 
   async getDocument(repositoryUrl: string, branch: string, path: string): Promise<string> {

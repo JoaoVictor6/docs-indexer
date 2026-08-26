@@ -1,6 +1,5 @@
 import { describe, it, expect, afterEach, mock } from "bun:test";
 import { createGitProvider, parseRepositoryUrl } from "./git";
-import type { McpConfig } from "./config";
 
 const originalFetch = globalThis.fetch;
 
@@ -76,21 +75,12 @@ describe("parseRepositoryUrl", () => {
 });
 
 describe("GitProvider (GitHub)", () => {
-  const config: McpConfig = {
-    databaseUrl: "postgres://localhost/db",
-    openrouterApiKey: "sk-test",
-    openrouterBaseUrl: "https://openrouter.ai/api/v1",
-    embeddingModel: "openai/text-embedding-3-small",
-    githubToken: "ghp-test",
-    githubBaseUrl: "https://raw.githubusercontent.com",
-  };
-
   afterEach(() => {
     globalThis.fetch = originalFetch;
   });
 
   it("fetches a file from a GitHub https repository URL", async () => {
-    const provider = createGitProvider(config);
+    const provider = createGitProvider("ghp-test");
 
     const fetchMock = mock(() =>
       Promise.resolve(new Response("# Authentication\n\nFull document content", {
@@ -118,7 +108,7 @@ describe("GitProvider (GitHub)", () => {
   });
 
   it("throws when the repository URL is not GitHub (unsupported domain)", async () => {
-    const provider = createGitProvider(config);
+    const provider = createGitProvider("ghp-test");
 
     await expect(
       provider.getDocument("https://gitlab.com/acme/payments-docs.git", "main", "docs/auth.md")
@@ -126,7 +116,7 @@ describe("GitProvider (GitHub)", () => {
   });
 
   it("throws when the repository URL is a Bitbucket URL", async () => {
-    const provider = createGitProvider(config);
+    const provider = createGitProvider("ghp-test");
 
     await expect(
       provider.getDocument("https://bitbucket.org/acme/payments-docs.git", "main", "docs/auth.md")
@@ -134,7 +124,7 @@ describe("GitProvider (GitHub)", () => {
   });
 
   it("throws when the fetch returns non-2xx", async () => {
-    const provider = createGitProvider(config);
+    const provider = createGitProvider("ghp-test");
 
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response("Not Found", { status: 404 }))

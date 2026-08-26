@@ -5,8 +5,7 @@ const envSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1),
   OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   EMBEDDING_MODEL: z.string().min(1).default("openai/text-embedding-3-small"),
-  GITHUB_TOKEN: z.string().min(1),
-  GITHUB_BASE_URL: z.string().url().default("https://raw.githubusercontent.com"),
+  SCM_TOKEN: z.string().min(1),
 });
 
 export interface McpConfig {
@@ -14,8 +13,7 @@ export interface McpConfig {
   openrouterApiKey: string;
   openrouterBaseUrl: string;
   embeddingModel: string;
-  githubToken: string;
-  githubBaseUrl: string;
+  scmToken: string;
 }
 
 export function getConfig(): McpConfig {
@@ -32,7 +30,6 @@ export function getConfig(): McpConfig {
     openrouterApiKey: env.OPENROUTER_API_KEY,
     openrouterBaseUrl: env.OPENROUTER_BASE_URL,
     embeddingModel: env.EMBEDDING_MODEL,
-    githubToken: env.GITHUB_TOKEN,
-    githubBaseUrl: env.GITHUB_BASE_URL,
+    scmToken: env.SCM_TOKEN,
   };
 }

@@ -83,6 +83,8 @@ describe("search integration (end-to-end)", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
 
+    expect(body.length).toBeGreaterThan(0);
+
     for (const result of body) {
       expect(result.project).toBe(TEST_PROJECT);
     }

@@ -18,15 +18,15 @@ class GitHubGitProvider implements GitProvider {
   }
 
   async getDocument(repositoryUrl: string, branch: string, path: string): Promise<string> {
-    const repo = parseGitHubRepo(repositoryUrl);
-    if (!repo) {
+    const repo = parseRepositoryUrl(repositoryUrl);
+    if (repo.provider !== "github") {
       throw new Error(
         `Only GitHub repositories are supported (got: ${repositoryUrl}); ` +
         `set the project's repository_url to a github.com repository`
       );
     }
 
-    const rawUrl = `${this.baseUrl}/${repo}/${branch}/${path}`;
+    const rawUrl = `${this.baseUrl}/${repo.owner}/${repo.repo}/${branch}/${path}`;
     const response = await fetch(rawUrl, {
       method: "GET",
       headers: {
@@ -43,9 +43,23 @@ class GitHubGitProvider implements GitProvider {
   }
 }
 
-function parseGitHubRepo(repositoryUrl: string): string | null {
+export interface RepositoryUrl {
+  provider: "github" | "bitbucket";
+  owner: string;
+  repo: string;
+}
+
+export function parseRepositoryUrl(repositoryUrl: string): RepositoryUrl {
   const match = repositoryUrl.match(
-    /(?:github\.com[:/])([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/
+    /^(?:https?:\/\/)?(github\.com|bitbucket\.org)[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/
   );
-  return match ? match[1] : null;
+  if (!match) {
+    throw new Error(
+      `Unsupported repository URL: ${repositoryUrl}; ` +
+        `only github.com and bitbucket.org repositories are supported`
+    );
+  }
+  const [, host, owner, repo] = match;
+  const provider = host === "github.com" ? "github" : "bitbucket";
+  return { provider, owner, repo };
 }

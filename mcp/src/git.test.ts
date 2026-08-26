@@ -1,8 +1,69 @@
 import { describe, it, expect, afterEach, mock } from "bun:test";
-import { createGitProvider } from "./git";
+import { createGitProvider, parseRepositoryUrl } from "./git";
 import type { McpConfig } from "./config";
 
 const originalFetch = globalThis.fetch;
+
+describe("parseRepositoryUrl", () => {
+  it("parses a GitHub HTTPS URL with .git suffix", () => {
+    const result = parseRepositoryUrl("https://github.com/acme/payments-docs.git");
+    expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a GitHub HTTPS URL without .git suffix", () => {
+    const result = parseRepositoryUrl("https://github.com/acme/payments-docs");
+    expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a GitHub HTTPS URL with trailing slash", () => {
+    const result = parseRepositoryUrl("https://github.com/acme/payments-docs/");
+    expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a Bitbucket HTTPS URL with .git suffix", () => {
+    const result = parseRepositoryUrl("https://bitbucket.org/acme/payments-docs.git");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a Bitbucket HTTPS URL without .git suffix", () => {
+    const result = parseRepositoryUrl("https://bitbucket.org/acme/payments-docs");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a Bitbucket HTTPS URL with trailing slash", () => {
+    const result = parseRepositoryUrl("https://bitbucket.org/acme/payments-docs/");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses owners with hyphens and dots", () => {
+    const result = parseRepositoryUrl("https://github.com/my-org.prefix/payments-docs.git");
+    expect(result).toEqual({ provider: "github", owner: "my-org.prefix", repo: "payments-docs" });
+  });
+
+  it("throws for unsupported domain (gitlab)", () => {
+    expect(() => parseRepositoryUrl("https://gitlab.com/acme/payments-docs.git")).toThrow(
+      "only github.com and bitbucket.org repositories are supported"
+    );
+  });
+
+  it("throws for unsupported domain (custom)", () => {
+    expect(() => parseRepositoryUrl("https://example.com/acme/payments-docs.git")).toThrow(
+      "only github.com and bitbucket.org repositories are supported"
+    );
+  });
+
+  it("throws for invalid URL format (no owner/repo)", () => {
+    expect(() => parseRepositoryUrl("https://github.com")).toThrow(
+      "only github.com and bitbucket.org repositories are supported"
+    );
+  });
+
+  it("throws for empty string", () => {
+    expect(() => parseRepositoryUrl("")).toThrow(
+      "only github.com and bitbucket.org repositories are supported"
+    );
+  });
+});
 
 describe("GitProvider (GitHub)", () => {
   const config: McpConfig = {
@@ -46,11 +107,19 @@ describe("GitProvider (GitHub)", () => {
     );
   });
 
-  it("throws when the repository URL is not GitHub", async () => {
+  it("throws when the repository URL is not GitHub (unsupported domain)", async () => {
     const provider = createGitProvider(config);
 
     await expect(
       provider.getDocument("https://gitlab.com/acme/payments-docs.git", "main", "docs/auth.md")
+    ).rejects.toThrow("only github.com and bitbucket.org repositories are supported");
+  });
+
+  it("throws when the repository URL is a Bitbucket URL", async () => {
+    const provider = createGitProvider(config);
+
+    await expect(
+      provider.getDocument("https://bitbucket.org/acme/payments-docs.git", "main", "docs/auth.md")
     ).rejects.toThrow("Only GitHub repositories are supported");
   });
 

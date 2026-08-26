@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, mock } from "bun:test";
-import { createGitProvider, parseRepositoryUrl } from "./git";
+import { createGitProvider, parseRepositoryUrl, BitbucketGitProvider } from "./git";
 
 const originalFetch = globalThis.fetch;
 
@@ -133,5 +133,59 @@ describe("GitProvider (GitHub)", () => {
     await expect(
       provider.getDocument("https://github.com/acme/payments-docs.git", "main", "docs/missing.md")
     ).rejects.toThrow("404");
+  });
+});
+
+describe("BitbucketGitProvider", () => {
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("fetches a file from a Bitbucket repository URL with Basic auth", async () => {
+    const provider = new BitbucketGitProvider("bbp-test");
+
+    const fetchMock = mock(() =>
+      Promise.resolve(new Response("# Auth docs\n\nSample content", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }))
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const content = await provider.getDocument(
+      "https://bitbucket.org/acme/payments-docs.git",
+      "main",
+      "docs/auth.md"
+    );
+
+    expect(content).toBe("# Auth docs\n\nSample content");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://bitbucket.org/acme/payments-docs/raw/main/docs/auth.md",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Basic YmJwLXRlc3Q=",
+        }),
+      })
+    );
+  });
+
+  it("throws when the fetch returns non-2xx", async () => {
+    const provider = new BitbucketGitProvider("bbp-test");
+
+    globalThis.fetch = mock(() =>
+      Promise.resolve(new Response("Not Found", { status: 404 }))
+    ) as unknown as typeof fetch;
+
+    await expect(
+      provider.getDocument("https://bitbucket.org/acme/payments-docs.git", "main", "docs/missing.md")
+    ).rejects.toThrow("Bitbucket returned 404");
+  });
+
+  it("throws when the repository URL is not a Bitbucket URL", async () => {
+    const provider = new BitbucketGitProvider("bbp-test");
+
+    await expect(
+      provider.getDocument("https://github.com/acme/payments-docs.git", "main", "docs/auth.md")
+    ).rejects.toThrow("Only Bitbucket repositories are supported");
   });
 });

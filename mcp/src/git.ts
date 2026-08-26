@@ -40,6 +40,39 @@ class GitHubGitProvider implements GitProvider {
   }
 }
 
+export class BitbucketGitProvider implements GitProvider {
+  private token: string;
+  private readonly baseUrl = "https://bitbucket.org";
+
+  constructor(scmToken: string) {
+    this.token = scmToken;
+  }
+
+  async getDocument(repositoryUrl: string, branch: string, path: string): Promise<string> {
+    const repo = parseRepositoryUrl(repositoryUrl);
+    if (repo.provider !== "bitbucket") {
+      throw new Error(
+        `Only Bitbucket repositories are supported (got: ${repositoryUrl}); ` +
+        `set the project's repository_url to a bitbucket.org repository`
+      );
+    }
+
+    const rawUrl = `${this.baseUrl}/${repo.owner}/${repo.repo}/raw/${branch}/${path}`;
+    const response = await fetch(rawUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${btoa(this.token)}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Bitbucket returned ${response.status} for ${rawUrl}`);
+    }
+
+    return await response.text();
+  }
+}
+
 export interface RepositoryUrl {
   provider: "github" | "bitbucket";
   owner: string;

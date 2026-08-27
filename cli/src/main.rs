@@ -34,6 +34,12 @@ pub enum Command {
 
         #[arg(long)]
         commit_sha: Option<String>,
+
+        #[arg(long)]
+        repository_url: Option<String>,
+
+        #[arg(long)]
+        provider: Option<String>,
     },
     /// Delete indexed files for a project
     Delete {
@@ -53,6 +59,12 @@ pub enum Command {
 
         #[arg(long)]
         commit_sha: Option<String>,
+
+        #[arg(long)]
+        repository_url: Option<String>,
+
+        #[arg(long)]
+        provider: Option<String>,
     },
 }
 
@@ -81,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = db::create_pool(&config)?;
     db::run_migrations(&pool).await?;
 
-    let provider = openrouter::OpenRouterProvider::new(&config);
+    let embedding_provider = openrouter::OpenRouterProvider::new(&config);
 
     match cli.command {
         Command::Index {
@@ -89,16 +101,20 @@ async fn main() -> anyhow::Result<()> {
             repository,
             files,
             commit_sha,
+            repository_url,
+            provider,
         } => {
             let files_ref: Option<Vec<PathBuf>> = files;
             commands::index::run(
                 &pool,
-                &provider,
+                &embedding_provider,
                 &config,
                 &project,
                 &repository,
                 files_ref.as_deref(),
                 commit_sha.as_deref(),
+                repository_url.as_deref(),
+                provider.as_deref(),
             )
             .await?;
         }
@@ -109,14 +125,18 @@ async fn main() -> anyhow::Result<()> {
             project,
             repository,
             commit_sha,
+            repository_url,
+            provider,
         } => {
             commands::rebuild::run(
                 &pool,
-                &provider,
+                &embedding_provider,
                 &config,
                 &project,
                 &repository,
                 commit_sha.as_deref(),
+                repository_url.as_deref(),
+                provider.as_deref(),
             )
             .await?;
         }

@@ -6,18 +6,25 @@ use tracing::info;
 use crate::config::Config;
 use crate::db;
 use crate::embedding::EmbeddingProvider;
+use crate::git::resolve_git_remote_url;
 
 use super::index;
 
 pub async fn run(
     pool: &PgPool,
-    provider: &dyn EmbeddingProvider,
+    embedding_provider: &dyn EmbeddingProvider,
     config: &Config,
     project_name: &str,
     repository: &Path,
     commit_sha: Option<&str>,
+    repository_url: Option<&str>,
+    provider: Option<&str>,
 ) -> anyhow::Result<()> {
-    let project = db::upsert_project(pool, project_name, None, "main", None).await?;
+    let effective_url = repository_url
+        .map(String::from)
+        .or_else(|| resolve_git_remote_url(repository));
+    let project =
+        db::upsert_project(pool, project_name, effective_url.as_deref(), "main", provider).await?;
 
     info!(
         project = %project_name,
@@ -33,12 +40,14 @@ pub async fn run(
 
     index::run(
         pool,
-        provider,
+        embedding_provider,
         config,
         project_name,
         repository,
         None,
         commit_sha,
+        effective_url.as_deref(),
+        provider,
     )
     .await
     .context("failed to re-index during rebuild")?;

@@ -7,20 +7,27 @@ use crate::chunker::chunk_document;
 use crate::config::Config;
 use crate::db;
 use crate::embedding::EmbeddingProvider;
+use crate::git::resolve_git_remote_url;
 use crate::models::ChunkInsert;
 use crate::scanner;
 use sqlx::PgPool;
 
 pub async fn run(
     pool: &PgPool,
-    provider: &dyn EmbeddingProvider,
+    embedding_provider: &dyn EmbeddingProvider,
     _config: &Config,
     project_name: &str,
     repository: &Path,
     files: Option<&[PathBuf]>,
     commit_sha: Option<&str>,
+    repository_url: Option<&str>,
+    provider: Option<&str>,
 ) -> anyhow::Result<()> {
-    let project = db::upsert_project(pool, project_name, None, "main", None).await?;
+    let effective_url = repository_url
+        .map(String::from)
+        .or_else(|| resolve_git_remote_url(repository));
+    let project =
+        db::upsert_project(pool, project_name, effective_url.as_deref(), "main", provider).await?;
 
     let scanned = match files {
         Some(paths) if !paths.is_empty() => {
@@ -60,7 +67,7 @@ pub async fn run(
         }
 
         let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
-        let batch = provider
+        let batch = embedding_provider
             .embed(&texts)
             .await
             .with_context(|| format!("failed to embed chunks for {}", file.relative_path))?;

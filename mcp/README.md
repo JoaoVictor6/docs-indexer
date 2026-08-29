@@ -18,7 +18,7 @@ Semantic search (OpenRouter embedding → pgVector)
 AI Agent picks a document
    │  get_document(project, path)
    ▼
-Git provider (raw.githubusercontent.com, branch `main`)
+Git provider (GitHub / Bitbucket, branch `main`)
    │  full document content
    ▼
 AI Agent gets trusted, up-to-date context
@@ -38,7 +38,7 @@ Two tools are exposed:
 - **Indexed documentation** (run the Rust CLI first — see the repo root `README.md` "Quick Start")
 - **Bun** (`https://bun.sh`) as the runtime
 - A valid **OpenRouter API key**
-- A **GitHub token** (used to read private repositories; for public repos any token works)
+- An **SCM token** (used to read private repositories via HTTP Basic auth. Both GitHub and Bitbucket are supported. Format: `username:token` or `username:app-password`)
 
 ## Configuration
 
@@ -55,8 +55,7 @@ cp .env.example .env
 | `OPENROUTER_API_KEY` | yes | — | OpenRouter API key for query embeddings |
 | `OPENROUTER_BASE_URL` | yes | `https://openrouter.ai/api/v1` | OpenRouter base URL |
 | `EMBEDDING_MODEL` | yes | `openai/text-embedding-3-small` | Embedding model (must match what the indexer used) |
-| `GITHUB_TOKEN` | yes | — | GitHub token for reading repositories |
-| `GITHUB_BASE_URL` | yes | `https://raw.githubusercontent.com` | Raw content base URL |
+| `SCM_TOKEN` | yes | — | SCM token for reading repositories (format: `username:token`) |
 
 > **Note:** `get_document` requires each project to have a `repository_url` set in
 > the `projects` table. The indexer CLI does not yet populate this automatically —
@@ -92,7 +91,7 @@ Add to `claude_desktop_config.json`:
       "env": {
         "DATABASE_URL": "postgres://docsindexer:docsindexer@localhost:5432/docsindexer",
         "OPENROUTER_API_KEY": "sk-or-v1-...",
-        "GITHUB_TOKEN": "ghp_..."
+        "SCM_TOKEN": "username:token"
       }
     }
   }
@@ -159,8 +158,7 @@ The following gaps are known and intentionally out of scope for the MVP:
    Without it, `get_document` fails with
    `repository_url is not set for project '<name>'`.
 
-2. **Only GitHub is supported** for source-of-truth retrieval (GitLab is a
-   future provider — see the `GitProvider` interface in `src/git.ts`).
+2. **GitLab is not yet supported** (see the `GitProvider` interface in `src/git.ts`).
 
 3. **Authorization is not yet enforced per-project.** The server trusts its
    environment (see PRD sections 27–28 for the planned model).

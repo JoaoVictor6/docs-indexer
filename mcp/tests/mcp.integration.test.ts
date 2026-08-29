@@ -87,7 +87,7 @@ describe("MCP integration (end-to-end)", () => {
       DO UPDATE SET text = EXCLUDED.text, embedding = EXCLUDED.embedding
     `;
 
-    const gitProvider = createGitProvider(config);
+    const gitProvider = createGitProvider(config.scmToken);
     gitProvider.getDocument = mock(async () => "# Full document content");
 
     server = buildMcpServer(config, sql, embeddingClient, gitProvider);

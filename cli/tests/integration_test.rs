@@ -109,6 +109,8 @@ async fn test_full_index_pipeline_idempotency_delete_rebuild() {
         dir.path(),
         None,
         Some("commit-001"),
+        None,
+        None,
     )
     .await
     .expect("initial indexing should succeed");
@@ -150,6 +152,8 @@ async fn test_full_index_pipeline_idempotency_delete_rebuild() {
         dir.path(),
         None,
         Some("commit-001"),
+        None,
+        None,
     )
     .await
     .expect("second indexing (idempotent) should succeed");
@@ -199,6 +203,8 @@ async fn test_full_index_pipeline_idempotency_delete_rebuild() {
         dir.path(),
         None,
         Some("commit-002"),
+        None,
+        None,
     )
     .await
     .expect("rebuild (re-index after delete_all) should succeed");

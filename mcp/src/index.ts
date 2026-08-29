@@ -101,7 +101,7 @@ async function main() {
   const config = getConfig();
   const sql = createPool(config);
   const embeddingClient = createEmbeddingClient(config);
-  const gitProvider = createGitProvider(config);
+  const gitProvider = createGitProvider(config.scmToken);
 
   const server = buildMcpServer(config, sql, embeddingClient, gitProvider);
 

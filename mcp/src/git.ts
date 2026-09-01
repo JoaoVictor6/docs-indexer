@@ -108,7 +108,7 @@ export function parseRepositoryUrl(repositoryUrl: string): RepositoryUrl {
   }
 
   const sshMatch = repositoryUrl.match(
-    /^git@(github\.com):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
+    /^git@(github\.com|bitbucket\.org):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
   );
   if (sshMatch) {
     const [, host, owner, repo] = sshMatch;

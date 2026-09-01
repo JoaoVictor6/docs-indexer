@@ -44,6 +44,16 @@ describe("parseRepositoryUrl", () => {
     expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
   });
 
+  it("parses a Bitbucket SSH URL with .git suffix", () => {
+    const result = parseRepositoryUrl("git@bitbucket.org:acme/payments-docs.git");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a Bitbucket SSH URL without .git suffix", () => {
+    const result = parseRepositoryUrl("git@bitbucket.org:acme/payments-docs");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
   it("parses owners with hyphens and dots", () => {
     const result = parseRepositoryUrl("https://github.com/my-org.prefix/payments-docs.git");
     expect(result).toEqual({ provider: "github", owner: "my-org.prefix", repo: "payments-docs" });

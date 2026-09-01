@@ -6,15 +6,21 @@ Semantic documentation indexer for AI agents. Scans Markdown documentation repos
 
 ```
 Repository (Git main)  →  Scanner  →  Chunker  →  OpenRouter Embeddings  →  PostgreSQL + pgVector
-                                                                                  │
-                                                                                  ▼
-                                                                            MCP Server (*)
-                                                                         (TypeScript, WIP)
+                                                                                   │
+                                                                                   ▼
+                                                                             API Server (Bun/Elysia)
+                                                                                   │
+                                                                                   ▼ (HTTP)
+                                                                             MCP Server (TypeScript)
+                                                                                   │ (stdio, MCP protocol)
+                                                                                   ▼
+                                                                             AI Agent
 ```
 
 - **`cli/`** — Rust binary (`docs-indexer`). Reads `.md`/`.mdx` files, chunks by headings, embeds in batch, and writes to the database transactionally.
 - **`infra/`** — Docker Compose for development PostgreSQL 16 + pgVector, SQL migrations, Dockerfile for the CLI binary.
-- **MCP Server** (*) — separate TypeScript component (not yet implemented). Queries the index and serves documentation to AI agents.
+- **`api/`** — Bun + Elysia REST API. Handles semantic search, query embedding, and project metadata. The authoritative serving layer.
+- **`mcp/`** — TypeScript MCP server. Thin HTTP client that calls the API for search and metadata, and fetches document content directly from Git.
 
 ## Quick Start
 
@@ -63,6 +69,7 @@ bun run dev
 | Method | Path | Query Params | Description |
 |---|---|---|---|
 | GET | `/search` | `q` (required), `project` (optional), `limit` (optional, default 10) | Semantic search returning ranked results |
+| GET | `/projects/:name/document` | `path` (required) | Returns project metadata (repositoryUrl, branch, commitSha) for document retrieval |
 | GET | `/openapi` | — | Interactive API docs (Scalar UI) |
 | GET | `/openapi/json` | — | Raw OpenAPI spec |
 

@@ -4,10 +4,12 @@ import { getConfig } from "./config";
 import { createPool, type Sql } from "./db";
 import { createEmbeddingClient, type EmbeddingClient } from "./embedding";
 import { createSearchRoute } from "./routes/search";
+import { createProjectDocumentRoute } from "./routes/project-document";
 import { authPlugin } from "./auth";
 
 export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
   const searchRoute = createSearchRoute(sql, embeddingClient);
+  const projectDocumentRoute = createProjectDocumentRoute(sql);
 
   return new Elysia()
     .use(openapi({
@@ -20,7 +22,8 @@ export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
       },
     }))
     .use(authPlugin)
-    .use(searchRoute) as unknown as Elysia;
+    .use(searchRoute)
+    .use(projectDocumentRoute) as unknown as Elysia;
 }
 
 if (import.meta.main) {

@@ -22,6 +22,17 @@ export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
       },
     }))
     .use(authPlugin)
+    .onRequest(({ request, set }) => {
+      (set as any).__start = Date.now();
+    })
+    .onAfterHandle(({ request, set }) => {
+      const start = (set as any).__start;
+      const duration = start ? Date.now() - start : 0;
+      console.log(`${request.method} ${new URL(request.url).pathname} ${set.status} ${duration}ms`);
+    })
+    .onError(({ request, code, set }) => {
+      console.log(`${request.method} ${new URL(request.url).pathname} ${set.status} error=${code}`);
+    })
     .use(searchRoute)
     .use(projectDocumentRoute) as unknown as Elysia;
 }

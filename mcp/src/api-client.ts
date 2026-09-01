@@ -30,7 +30,8 @@ export function createApiClient(baseUrl: string): ApiClient {
       return (await res.json()) as ApiSearchResult[];
     },
     async getDocumentMetadata(project, path) {
-      const url = `${baseUrl}/projects/${encodeURIComponent(project)}/document?${new URLSearchParams({ path })}`;
+      const encodedProject = encodeURIComponent(project).replace(/\./g, "%2E");
+      const url = `${baseUrl}/projects/${encodedProject}/document?${new URLSearchParams({ path })}`;
       const res = await fetch(url);
       if (res.status === 404) return null;
       if (!res.ok) throw new Error(`API document returned ${res.status}`);

@@ -1,19 +1,15 @@
 import { describe, it, expect, mock } from "bun:test";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { buildMcpServer } from "./index";
-import type { Sql } from "./db";
-import type { EmbeddingClient } from "./embedding";
+import type { ApiClient } from "./api-client";
 import type { GitProvider } from "./git";
 import type { McpConfig } from "./config";
 
-function createMockSql(): Sql {
-  return mock(async (_strings: TemplateStringsArray, ..._values: unknown[]) => []) as unknown as Sql;
-}
-
-function createMockEmbeddingClient(): EmbeddingClient {
+function createMockApiClient(): ApiClient {
   return {
-    embed: mock(async (_: string): Promise<number[]> => new Array(1536).fill(0)),
-  };
+    search: mock(async () => []),
+    getDocumentMetadata: mock(async () => null),
+  } as unknown as ApiClient;
 }
 
 function createMockGitProvider(): GitProvider {
@@ -23,16 +19,13 @@ function createMockGitProvider(): GitProvider {
 }
 
 const config: McpConfig = {
-  databaseUrl: "postgres://localhost/db",
-  openrouterApiKey: "sk-test",
-  openrouterBaseUrl: "https://openrouter.ai/api/v1",
-  embeddingModel: "openai/text-embedding-3-small",
+  apiUrl: "http://localhost:3001",
   scmToken: "ghp-test",
 };
 
 describe("buildMcpServer", () => {
   it("registers both tools", async () => {
-    const server = buildMcpServer(config, createMockSql(), createMockEmbeddingClient(), createMockGitProvider());
+    const server = buildMcpServer(config, createMockApiClient(), createMockGitProvider());
 
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);

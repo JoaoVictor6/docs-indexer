@@ -3,11 +3,13 @@ import { z } from "zod";
 const envSchema = z.object({
   API_URL: z.string().url(),
   SCM_TOKEN: z.string().min(1),
+  LOCAL_REPOS: z.string().optional(),
 });
 
 export interface McpConfig {
   apiUrl: string;
   scmToken: string;
+  localRepos: Record<string, string>;
 }
 
 export function getConfig(): McpConfig {
@@ -19,5 +21,13 @@ export function getConfig(): McpConfig {
     throw new Error(`Invalid environment configuration: ${issues}`);
   }
   const env = parsed.data;
-  return { apiUrl: env.API_URL, scmToken: env.SCM_TOKEN };
+  let localRepos: Record<string, string> = {};
+  if (env.LOCAL_REPOS) {
+    try {
+      localRepos = JSON.parse(env.LOCAL_REPOS);
+    } catch {
+      console.error("Warning: LOCAL_REPOS is not valid JSON, using empty object");
+    }
+  }
+  return { apiUrl: env.API_URL, scmToken: env.SCM_TOKEN, localRepos };
 }

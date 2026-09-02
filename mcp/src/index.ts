@@ -55,7 +55,7 @@ IMPORTANT:
     }
   );
 
-  const getDocumentTool = createGetDocumentTool(apiClient, gitProvider);
+  const getDocumentTool = createGetDocumentTool(apiClient, gitProvider, _config.localRepos);
   const getDocumentToolDescription = `
 Retrieve the complete content of a specific documentation file from the project's Git
 source of truth on the main branch.

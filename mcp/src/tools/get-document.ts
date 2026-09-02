@@ -22,11 +22,28 @@ export interface GetDocumentTool {
   handler: (args: z.infer<typeof getDocumentInputSchema>) => Promise<GetDocumentResult>;
 }
 
-export function createGetDocumentTool(apiClient: ApiClient, gitProvider: GitProvider): GetDocumentTool {
+export function createGetDocumentTool(apiClient: ApiClient, gitProvider: GitProvider, localRepos: Record<string, string>): GetDocumentTool {
   return {
     name: "get_document",
     inputSchema: getDocumentInputSchema,
     handler: async ({ project, path }) => {
+      const localDir = localRepos[project];
+      if (localDir) {
+        const localPath = `${localDir}/${path}`;
+        const file = Bun.file(localPath);
+        if (await file.exists()) {
+          const content = await file.text();
+          return {
+            project,
+            path,
+            commitSha: null,
+            branch: "main",
+            content,
+            sourceUrl: localPath,
+          };
+        }
+      }
+
       const metadata = await apiClient.getDocumentMetadata(project, path);
       if (!metadata) {
         throw new Error(`Project '${project}' not found`);

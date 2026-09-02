@@ -59,6 +59,7 @@ cp .env.example .env
 | Env Var | Required | Default | Description |
 |---|---|---|---|
 | `API_URL` | yes | — | URL of the docs-indexer API, e.g. `http://localhost:3000` |
+| `DEFAULT_PROJECT` | no | — | Default project name. When set, tools omit the `project` parameter — all searches and document fetches use this project. |
 | `LOCAL_REPOS` | no | `{}` | JSON map of project name → local clone path. When set, `get_document` reads files from disk instead of Git. |
 | `SCM_TOKEN` | yes | — | SCM token for reading repositories (format: `username:token`) |
 
@@ -121,13 +122,16 @@ command with the environment variables above.
 
 ## Tool reference
 
+> **Note:** When `DEFAULT_PROJECT` is set, the `project` parameter is
+> automatically supplied by the server and not exposed to the agent.
+
 ### `search_documentation`
 
 **Input:**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `project` | string | yes | Project name to search within |
+| `project` | string | yes (*) | Project name to search within |
 | `query` | string | yes | Natural-language search query |
 | `limit` | number | no | Max results (default 10) |
 
@@ -140,7 +144,7 @@ ordered by similarity descending.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `project` | string | yes | Project name |
+| `project` | string | yes (*) | Project name |
 | `path` | string | yes | Document path, e.g. `docs/authentication.md` |
 
 **Output:** `{ project, path, commitSha, branch, content, sourceUrl }` — the

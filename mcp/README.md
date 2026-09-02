@@ -59,10 +59,28 @@ cp .env.example .env
 | Env Var | Required | Default | Description |
 |---|---|---|---|
 | `API_URL` | yes | — | URL of the docs-indexer API, e.g. `http://localhost:3000` |
+| `LOCAL_REPOS` | no | `{}` | JSON map of project name → local clone path. When set, `get_document` reads files from disk instead of Git. |
 | `SCM_TOKEN` | yes | — | SCM token for reading repositories (format: `username:token`) |
 
 > **Note:** The MCP server no longer needs direct DB or OpenRouter access — all search and metadata
 > lookup goes through the API. The `SCM_TOKEN` is only used for client-side Git document fetch.
+
+### Local file fallback
+
+When Bitbucket App Passwords aren't available or the repository URL is SSH-only,
+you can pre-clone repositories locally and bypass HTTP entirely:
+
+```bash
+# Clone the repo locally
+git clone git@bitbucket.org:workspace/repo.git /home/joao/repos/my-project
+
+# Point LOCAL_REPOS to it
+LOCAL_REPOS='{"my-project":"/home/joao/repos/my-project"}'
+```
+
+When a project is found in `LOCAL_REPOS` and the file exists on disk, `get_document`
+reads it directly — no HTTP request to Bitbucket/GitHub. If the file doesn't exist
+locally, it falls through to the normal API + Git flow.
 
 ## Running
 

@@ -13,7 +13,7 @@ export function buildMcpServer(
 ): McpServer {
   const server = new McpServer({ name: "docs-indexer", version: "0.1.0" });
 
-  const searchTool = createSearchDocumentationTool(apiClient);
+  const searchTool = createSearchDocumentationTool(apiClient, _config.defaultProject);
   const searchDocumentToolDescription = `
 Search the project's indexed documentation to discover and disambiguate concepts,
 terminology, components, APIs, workflows, and implementation details.
@@ -55,7 +55,7 @@ IMPORTANT:
     }
   );
 
-  const getDocumentTool = createGetDocumentTool(apiClient, gitProvider, _config.localRepos);
+  const getDocumentTool = createGetDocumentTool(apiClient, gitProvider, _config.localRepos, _config.defaultProject);
   const getDocumentToolDescription = `
 Retrieve the complete content of a specific documentation file from the project's Git
 source of truth on the main branch.

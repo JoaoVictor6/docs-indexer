@@ -19,18 +19,25 @@ export interface SearchResult {
 
 export interface SearchDocumentationTool {
   name: "search_documentation";
-  inputSchema: typeof searchDocumentationInputSchema;
-  handler: (args: z.infer<typeof searchDocumentationInputSchema>) => Promise<SearchResult[]>;
+  inputSchema: ReturnType<typeof z.object>;
+  handler: (args: { query: string; project?: string; limit?: number }) => Promise<SearchResult[]>;
 }
 
 export function createSearchDocumentationTool(
-  apiClient: ApiClient
+  apiClient: ApiClient,
+  defaultProject?: string
 ): SearchDocumentationTool {
+  const inputSchema = defaultProject
+    ? searchDocumentationInputSchema.omit({ project: true })
+    : searchDocumentationInputSchema;
+
   return {
     name: "search_documentation",
-    inputSchema: searchDocumentationInputSchema,
-    handler: async ({ project, query, limit }) => {
-      const results = await apiClient.search({ query: query.trim(), project, limit: limit ?? 10 });
+    inputSchema,
+    handler: async ({ query, limit, ...rest }) => {
+      const args = inputSchema.parse({ query, limit, ...rest });
+      const effectiveProject = defaultProject ?? (args as any).project as string;
+      const results = await apiClient.search({ query: query.trim(), project: effectiveProject, limit: limit ?? 10 });
       return results;
     },
   };

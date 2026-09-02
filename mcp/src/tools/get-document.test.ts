@@ -35,7 +35,7 @@ describe("get_document tool", () => {
       },
       "# Full doc content"
     );
-    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos);
+    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos, undefined);
 
     const result = await tool.handler({
       project: "payments",
@@ -60,7 +60,7 @@ describe("get_document tool", () => {
 
   it("throws when the project is not found", async () => {
     const { apiClient, gitProvider, localRepos } = createMocks(null, "");
-    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos);
+    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos, undefined);
 
     await expect(
       tool.handler({ project: "unknown", path: "docs/a.md" })
@@ -78,7 +78,7 @@ describe("get_document tool", () => {
       },
       ""
     );
-    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos);
+    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos, undefined);
 
     await expect(
       tool.handler({ project: "payments", path: "docs/a.md" })
@@ -98,7 +98,7 @@ describe("get_document tool", () => {
       { payments: "/local/payments-docs" }
     );
     mockBunFile(true, "# Local file content");
-    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos);
+    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos, undefined);
 
     const result = await tool.handler({
       project: "payments",
@@ -130,7 +130,7 @@ describe("get_document tool", () => {
       { payments: "/local/payments-docs" }
     );
     mockBunFile(false, "");
-    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos);
+    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos, undefined);
 
     const result = await tool.handler({
       project: "payments",
@@ -151,5 +151,38 @@ describe("get_document tool", () => {
       content: "# Full doc content",
       sourceUrl: "https://github.com/acme/payments-docs",
     });
+  });
+
+  it("omits project from schema when defaultProject is set", () => {
+    const { apiClient, gitProvider, localRepos } = createMocks(null, "");
+    const tool = createGetDocumentTool(apiClient, gitProvider, {}, "default-proj");
+
+    const withoutProject = tool.inputSchema.safeParse({ path: "docs/a.md" });
+    expect(withoutProject.success).toBe(true);
+
+    const withProject = tool.inputSchema.safeParse({ project: "other", path: "docs/a.md" });
+    expect(withProject.success).toBe(true);
+    expect((withProject as any).data).not.toHaveProperty("project");
+  });
+
+  it("handler uses defaultProject when set", async () => {
+    const { apiClient, gitProvider, localRepos } = createMocks(
+      {
+        project: "default-proj",
+        path: "docs/a.md",
+        repositoryUrl: null,
+        branch: "main",
+        commitSha: null,
+      },
+      "",
+      { "default-proj": "/local/default-docs" }
+    );
+    mockBunFile(true, "# Local content");
+    const tool = createGetDocumentTool(apiClient, gitProvider, localRepos, "default-proj");
+
+    const result = await tool.handler({ path: "docs/a.md" });
+
+    expect(apiClient.getDocumentMetadata).not.toHaveBeenCalled();
+    expect(result.project).toBe("default-proj");
   });
 });

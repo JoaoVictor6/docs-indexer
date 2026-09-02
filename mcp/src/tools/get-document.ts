@@ -18,23 +18,35 @@ export interface GetDocumentResult {
 
 export interface GetDocumentTool {
   name: "get_document";
-  inputSchema: typeof getDocumentInputSchema;
-  handler: (args: z.infer<typeof getDocumentInputSchema>) => Promise<GetDocumentResult>;
+  inputSchema: ReturnType<typeof z.object>;
+  handler: (args: { path: string; project?: string }) => Promise<GetDocumentResult>;
 }
 
-export function createGetDocumentTool(apiClient: ApiClient, gitProvider: GitProvider, localRepos: Record<string, string>): GetDocumentTool {
+export function createGetDocumentTool(
+  apiClient: ApiClient,
+  gitProvider: GitProvider,
+  localRepos: Record<string, string>,
+  defaultProject?: string
+): GetDocumentTool {
+  const inputSchema = defaultProject
+    ? getDocumentInputSchema.omit({ project: true })
+    : getDocumentInputSchema;
+
   return {
     name: "get_document",
-    inputSchema: getDocumentInputSchema,
-    handler: async ({ project, path }) => {
-      const localDir = localRepos[project];
+    inputSchema,
+    handler: async ({ path, ...rest }) => {
+      const args = inputSchema.parse({ path, ...rest });
+      const effectiveProject = defaultProject ?? (args as any).project as string;
+
+      const localDir = localRepos[effectiveProject];
       if (localDir) {
         const localPath = `${localDir}/${path}`;
         const file = Bun.file(localPath);
         if (await file.exists()) {
           const content = await file.text();
           return {
-            project,
+            project: effectiveProject,
             path,
             commitSha: null,
             branch: "main",
@@ -44,17 +56,17 @@ export function createGetDocumentTool(apiClient: ApiClient, gitProvider: GitProv
         }
       }
 
-      const metadata = await apiClient.getDocumentMetadata(project, path);
+      const metadata = await apiClient.getDocumentMetadata(effectiveProject, path);
       if (!metadata) {
-        throw new Error(`Project '${project}' not found`);
+        throw new Error(`Project '${effectiveProject}' not found`);
       }
       if (!metadata.repositoryUrl) {
-        throw new Error(`repository_url is not set for project '${project}'`);
+        throw new Error(`repository_url is not set for project '${effectiveProject}'`);
       }
       const content = await gitProvider.getDocument(metadata.repositoryUrl, metadata.branch, path);
 
       return {
-        project,
+        project: effectiveProject,
         path,
         commitSha: metadata.commitSha,
         branch: metadata.branch,

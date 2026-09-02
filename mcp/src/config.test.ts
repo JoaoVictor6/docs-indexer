@@ -5,6 +5,7 @@ function saveEnv(): Record<string, string | undefined> {
     API_URL: process.env.API_URL,
     SCM_TOKEN: process.env.SCM_TOKEN,
     LOCAL_REPOS: process.env.LOCAL_REPOS,
+    DEFAULT_PROJECT: process.env.DEFAULT_PROJECT,
   };
 }
 
@@ -19,6 +20,7 @@ function clearEnv() {
   delete process.env.API_URL;
   delete process.env.SCM_TOKEN;
   delete process.env.LOCAL_REPOS;
+  delete process.env.DEFAULT_PROJECT;
 }
 
 describe("getConfig", () => {
@@ -83,5 +85,30 @@ describe("getConfig", () => {
     const { getConfig } = await import("./config");
     const config = getConfig();
     expect(config.localRepos).toEqual({});
+  });
+
+  it("DEFAULT_PROJECT set → config.defaultProject has the value", async () => {
+    process.env.API_URL = "https://api.example.com";
+    process.env.SCM_TOKEN = "ghp-test";
+    process.env.DEFAULT_PROJECT = "my-project";
+    const { getConfig } = await import("./config");
+    const config = getConfig();
+    expect(config.defaultProject).toBe("my-project");
+  });
+
+  it("DEFAULT_PROJECT not set → config.defaultProject is undefined", async () => {
+    process.env.API_URL = "https://api.example.com";
+    process.env.SCM_TOKEN = "ghp-test";
+    const { getConfig } = await import("./config");
+    const config = getConfig();
+    expect(config.defaultProject).toBeUndefined();
+  });
+
+  it("DEFAULT_PROJECT is empty string → throws (min(1) validation)", async () => {
+    process.env.API_URL = "https://api.example.com";
+    process.env.SCM_TOKEN = "ghp-test";
+    process.env.DEFAULT_PROJECT = "";
+    const { getConfig } = await import("./config");
+    expect(() => getConfig()).toThrow();
   });
 });

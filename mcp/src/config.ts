@@ -4,12 +4,14 @@ const envSchema = z.object({
   API_URL: z.string().url(),
   SCM_TOKEN: z.string().min(1),
   LOCAL_REPOS: z.string().optional(),
+  DEFAULT_PROJECT: z.string().min(1).optional(),
 });
 
 export interface McpConfig {
   apiUrl: string;
   scmToken: string;
   localRepos: Record<string, string>;
+  defaultProject?: string;
 }
 
 export function getConfig(): McpConfig {
@@ -29,5 +31,5 @@ export function getConfig(): McpConfig {
       console.error("Warning: LOCAL_REPOS is not valid JSON, using empty object");
     }
   }
-  return { apiUrl: env.API_URL, scmToken: env.SCM_TOKEN, localRepos };
+  return { apiUrl: env.API_URL, scmToken: env.SCM_TOKEN, localRepos, defaultProject: env.DEFAULT_PROJECT };
 }

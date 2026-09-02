@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Sql } from "../db";
+import type { ApiClient } from "../api-client";
 import type { GitProvider } from "../git";
 
 export const getDocumentInputSchema = z.object({
@@ -18,49 +18,60 @@ export interface GetDocumentResult {
 
 export interface GetDocumentTool {
   name: "get_document";
-  inputSchema: typeof getDocumentInputSchema;
-  handler: (args: z.infer<typeof getDocumentInputSchema>) => Promise<GetDocumentResult>;
+  inputSchema: ReturnType<typeof z.object>;
+  handler: (args: { path: string; project?: string }) => Promise<GetDocumentResult>;
 }
 
-interface ProjectRow {
-  repositoryUrl: string | null;
-  branch: string;
-  commitSha: string | null;
-}
+export function createGetDocumentTool(
+  apiClient: ApiClient,
+  gitProvider: GitProvider,
+  localRepos: Record<string, string>,
+  defaultProject?: string
+): GetDocumentTool {
+  const inputSchema = defaultProject
+    ? getDocumentInputSchema.omit({ project: true })
+    : getDocumentInputSchema;
 
-export function createGetDocumentTool(sql: Sql, gitProvider: GitProvider): GetDocumentTool {
   return {
     name: "get_document",
-    inputSchema: getDocumentInputSchema,
-    handler: async ({ project, path }) => {
-      const rows = await sql<ProjectRow[]>`
-        SELECT
-          p.repository_url AS "repositoryUrl",
-          p.default_branch AS branch,
-          d.commit_sha AS "commitSha"
-        FROM projects p
-        LEFT JOIN documents d ON d.project_id = p.id AND d.path = ${path}
-        WHERE p.name = ${project}
-      `;
+    inputSchema,
+    handler: async ({ path, ...rest }) => {
+      const args = inputSchema.parse({ path, ...rest });
+      const effectiveProject = defaultProject ?? (args as any).project as string;
 
-      if (rows.length === 0) {
-        throw new Error(`Project '${project}' not found`);
+      const localDir = localRepos[effectiveProject];
+      if (localDir) {
+        const localPath = `${localDir}/${path}`;
+        const file = Bun.file(localPath);
+        if (await file.exists()) {
+          const content = await file.text();
+          return {
+            project: effectiveProject,
+            path,
+            commitSha: null,
+            branch: "main",
+            content,
+            sourceUrl: localPath,
+          };
+        }
       }
 
-      const row = rows[0];
-      if (!row.repositoryUrl) {
-        throw new Error(`repository_url is not set for project '${project}'`);
+      const metadata = await apiClient.getDocumentMetadata(effectiveProject, path);
+      if (!metadata) {
+        throw new Error(`Project '${effectiveProject}' not found`);
       }
-
-      const content = await gitProvider.getDocument(row.repositoryUrl, row.branch, path);
+      if (!metadata.repositoryUrl) {
+        throw new Error(`repository_url is not set for project '${effectiveProject}'`);
+      }
+      const content = await gitProvider.getDocument(metadata.repositoryUrl, metadata.branch, path);
 
       return {
-        project,
+        project: effectiveProject,
         path,
-        commitSha: row.commitSha,
-        branch: row.branch,
+        commitSha: metadata.commitSha,
+        branch: metadata.branch,
         content,
-        sourceUrl: row.repositoryUrl.replace(/\.git$/, ""),
+        sourceUrl: metadata.repositoryUrl.replace(/\.git$/, ""),
       };
     },
   };

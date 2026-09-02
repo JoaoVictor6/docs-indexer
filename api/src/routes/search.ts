@@ -13,6 +13,9 @@ export const searchResultSchema = z.object({
   chunk: z.string(),
   path: z.string(),
   project: z.string(),
+  repositoryUrl: z.string().nullable(),
+  title: z.string().nullable(),
+  heading: z.string().nullable(),
   similarity: z.number(),
 });
 
@@ -34,6 +37,9 @@ export function createSearchRoute(sql: Sql, embeddingClient: EmbeddingClient) {
           c.text AS chunk,
           d.path AS path,
           p.name AS project,
+          p.repository_url AS "repositoryUrl",
+          d.title AS title,
+          c.heading AS heading,
           1 - (c.embedding <=> ${embeddingVector}::vector) AS similarity
         FROM chunks c
         JOIN documents d ON c.document_id = d.id

@@ -10,12 +10,18 @@ function createMockSql(): Sql {
       chunk: "This is a test chunk about authentication",
       path: "docs/auth.md",
       project: "test-project",
+      repositoryUrl: "https://github.com/acme/docs.git",
+      title: "Authentication",
+      heading: "Overview",
       similarity: 0.95,
     },
     {
       chunk: "Another chunk about payments",
       path: "docs/payments.md",
       project: "test-project",
+      repositoryUrl: "https://github.com/acme/docs.git",
+      title: "Authentication",
+      heading: "Overview",
       similarity: 0.82,
     },
   ]) as unknown as Sql;
@@ -52,6 +58,9 @@ describe("GET /search", () => {
     expect(body[0]).toHaveProperty("path");
     expect(body[0]).toHaveProperty("project");
     expect(body[0]).toHaveProperty("similarity");
+    expect(body[0]).toHaveProperty("repositoryUrl");
+    expect(body[0]).toHaveProperty("title");
+    expect(body[0]).toHaveProperty("heading");
   });
 
   it("returns 422 when query parameter is missing", async () => {

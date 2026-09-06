@@ -1,4 +1,3 @@
-use anyhow::Context;
 use clap::{Parser, Subcommand};
 use docs_indexer::{commands, config, db, openrouter};
 use std::path::PathBuf;
@@ -87,8 +86,7 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let config = config::Config::from_file(&PathBuf::from("config.yaml"))
-        .context("failed to load configuration")?;
+    let config = config::Config::from_env()?;
 
     let pool = db::create_pool(&config)?;
     db::run_migrations(&pool).await?;

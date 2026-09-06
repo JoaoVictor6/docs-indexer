@@ -1,13 +1,18 @@
 import { Elysia } from "elysia";
 import { openapi } from "@elysia/openapi";
-import prometheusPlugin from "elysia-prometheus";
 import { getConfig } from "./config";
 import { createPool, type Sql } from "./db";
 import { createEmbeddingClient, type EmbeddingClient } from "./embedding";
 import { createSearchRoute } from "./routes/search";
 import { createProjectDocumentRoute } from "./routes/project-document";
 import { authPlugin } from "./auth";
-import { domainRegistry, domainMetricsText, startDbCollector } from "./metrics";
+import {
+  domainRegistry,
+  domainMetricsText,
+  startHttpTimer,
+  recordHttpMetric,
+  startDbCollector,
+} from "./metrics";
 
 export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
   const searchRoute = createSearchRoute(sql, embeddingClient);
@@ -23,26 +28,25 @@ export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
         },
       },
     }))
-    .use(prometheusPlugin({
-      staticLabels: { service: 'docs-indexer' },
-      dynamicLabels: { source: (ctx) => ctx.request.headers.get('x-docs-indexer-source') ?? 'http' },
-    }))
-    .use(new Elysia().get('/metrics/domain', async () => {
+    .use(authPlugin)
+    .get('/metrics', async () => {
       return new Response(await domainMetricsText(), {
         headers: { 'Content-Type': domainRegistry.contentType },
       });
-    }))
-    .use(authPlugin)
+    })
     .onRequest(({ request, set }) => {
       (set as any).__start = Date.now();
+      startHttpTimer({ request });
     })
     .onAfterHandle(({ request, set }) => {
       const start = (set as any).__start;
       const duration = start ? Date.now() - start : 0;
       console.log(`${request.method} ${new URL(request.url).pathname} ${set.status} ${duration}ms`);
+      recordHttpMetric({ request, set }, set.status);
     })
     .onError(({ request, code, set }) => {
       console.log(`${request.method} ${new URL(request.url).pathname} ${set.status} error=${code}`);
+      recordHttpMetric({ request, set }, set.status);
     })
     .use(searchRoute)
     .use(projectDocumentRoute) as unknown as Elysia;

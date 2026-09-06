@@ -1,4 +1,5 @@
 import type { AppConfig } from "./config";
+import { embeddingDurationSeconds, embeddingRequestsTotal } from "./metrics";
 
 export interface EmbeddingClient {
   embed(text: string): Promise<number[]>;
@@ -20,30 +21,38 @@ class OpenRouterEmbeddingClient implements EmbeddingClient {
   }
 
   async embed(text: string): Promise<number[]> {
-    const response = await fetch(`${this.baseUrl}/embeddings`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: this.model,
-        input: [text],
-      }),
-    });
+    const labels = { provider: "openrouter", model: this.model };
+    embeddingRequestsTotal.inc(labels);
+    const observe = embeddingDurationSeconds.startTimer(labels);
 
-    if (!response.ok) {
-      throw new Error(`OpenRouter returned ${response.status}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/embeddings`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: this.model,
+          input: [text],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter returned ${response.status}`);
+      }
+
+      const result = (await response.json()) as {
+        data: Array<{ embedding: number[] }>;
+      };
+
+      if (!result.data || result.data.length === 0) {
+        throw new Error("OpenRouter returned no embeddings");
+      }
+
+      return result.data[0].embedding;
+    } finally {
+      observe();
     }
-
-    const result = (await response.json()) as {
-      data: Array<{ embedding: number[] }>;
-    };
-
-    if (!result.data || result.data.length === 0) {
-      throw new Error("OpenRouter returned no embeddings");
-    }
-
-    return result.data[0].embedding;
   }
 }

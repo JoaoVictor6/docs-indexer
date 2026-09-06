@@ -6,6 +6,7 @@ const envSchema = z.object({
   OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   EMBEDDING_MODEL: z.string().min(1).default("openai/text-embedding-3-small"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  DB_COLLECTOR_INTERVAL_MS: z.coerce.number().int().min(1000).default(60000),
 });
 
 export interface AppConfig {
@@ -14,6 +15,7 @@ export interface AppConfig {
   openrouterBaseUrl: string;
   embeddingModel: string;
   port: number;
+  dbCollectorIntervalMs: number;
 }
 
 export function getConfig(): AppConfig {
@@ -31,5 +33,6 @@ export function getConfig(): AppConfig {
     openrouterBaseUrl: env.OPENROUTER_BASE_URL,
     embeddingModel: env.EMBEDDING_MODEL,
     port: env.PORT,
+    dbCollectorIntervalMs: env.DB_COLLECTOR_INTERVAL_MS,
   };
 }

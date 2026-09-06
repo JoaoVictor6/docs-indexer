@@ -11,3 +11,6 @@ cli/Cargo.lock
 
 node_modules/
 api/.env
+
+.opencode/
+.superpowers/

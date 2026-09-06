@@ -29,24 +29,20 @@ Repository (Git main)  →  Scanner  →  Chunker  →  OpenRouter Embeddings  �
 cp .env.example .env
 # Edit .env with your OpenRouter API key and model choice
 
-# 2. Create config
-echo 'database_url: "postgres://docsindexer:docsindexer@localhost:5432/docsindexer"
-openrouter_api_key: "sk-or-v1-your-key"' > config.yaml
-
-# 3. Start database
+# 2. Start database
 docker compose -f infra/docker-compose.yml up -d
 
-# 4. Index documentation
+# 3. Index documentation
 cargo run -- index --project my-project --repository /path/to/docs --commit-sha $(git rev-parse HEAD)
 
-# 5. Index specific files (CI after merge)
+# 4. Index specific files (CI after merge)
 cargo run -- index --project my-project --repository /path/to/docs \
   --files docs/auth.md docs/api.md
 
-# 6. Delete removed files
+# 5. Delete removed files
 cargo run -- delete --project my-project --files docs/old.md
 
-# 7. Full rebuild (model change, migration, disaster recovery)
+# 6. Full rebuild (model change, migration, disaster recovery)
 cargo run -- rebuild --project my-project --repository /path/to/docs
 ```
 
@@ -94,15 +90,15 @@ Response (JSON array, ordered by similarity descending):
 
 ## Configuration
 
-Configuration is loaded from a YAML file (`config.yaml` by default). All values can be overridden by environment variables — secrets must never be committed.
+Configuration is loaded from environment variables (via `.env`, read by dotenvy). The required variables `DATABASE_URL` and `OPENROUTER_API_KEY` fail fast with a clear error if missing; secrets must never be committed.
 
-| YAML Key | Env Var | Default | Description |
-|---|---|---|---|
-| `database_url` | `DATABASE_URL` | — | PostgreSQL connection string |
-| `openrouter_api_key` | `OPENROUTER_API_KEY` | — | OpenRouter API key |
-| `openrouter_base_url` | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | API base URL |
-| `embedding_model` | `EMBEDDING_MODEL` | `openai/text-embedding-3-small` | Model to use for embeddings |
-| `embedding_dimension` | `EMBEDDING_DIMENSION` | `1536` | Expected output dimension |
+| Env Var | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | — | PostgreSQL connection string |
+| `OPENROUTER_API_KEY` | — | OpenRouter API key |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | API base URL |
+| `EMBEDDING_MODEL` | `openai/text-embedding-3-small` | Model to use for embeddings |
+| `EMBEDDING_DIMENSION` | `1536` | Expected output dimension |
 
 ## Subcommands
 
@@ -212,7 +208,7 @@ projects  ──< documents  ──< chunks
 │   ├── src/
 │   │   ├── main.rs           # Binary entrypoint + CLI
 │   │   ├── lib.rs            # Library root
-│   │   ├── config.rs         # YAML + env config
+│   │   ├── config.rs         # env config
 │   │   ├── cli.rs            # Clap argument definitions
 │   │   ├── db.rs             # PostgreSQL + pgVector operations
 │   │   ├── models.rs         # Database models

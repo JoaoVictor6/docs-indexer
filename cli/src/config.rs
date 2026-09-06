@@ -1,16 +1,11 @@
 use anyhow::Context;
-use serde::Deserialize;
-use std::path::Path;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub database_url: String,
     pub openrouter_api_key: String,
-    #[serde(default = "default_openrouter_base_url")]
     pub openrouter_base_url: String,
-    #[serde(default = "default_embedding_model")]
     pub embedding_model: String,
-    #[serde(default = "default_embedding_dimension")]
     pub embedding_dimension: i32,
 }
 
@@ -27,59 +22,90 @@ fn default_embedding_dimension() -> i32 {
 }
 
 impl Config {
-    pub fn from_file(path: &Path) -> anyhow::Result<Self> {
-        let contents = std::fs::read_to_string(path)
-            .with_context(|| format!("failed to read config file: {}", path.display()))?;
+    pub fn from_env() -> anyhow::Result<Self> {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => anyhow::bail!("DATABASE_URL is not set"),
+        };
+        let openrouter_api_key = match std::env::var("OPENROUTER_API_KEY") {
+            Ok(val) => val,
+            Err(_) => anyhow::bail!("OPENROUTER_API_KEY is not set"),
+        };
+        let openrouter_base_url =
+            std::env::var("OPENROUTER_BASE_URL").unwrap_or_else(|_| default_openrouter_base_url());
+        let embedding_model =
+            std::env::var("EMBEDDING_MODEL").unwrap_or_else(|_| default_embedding_model());
+        let embedding_dimension = std::env::var("EMBEDDING_DIMENSION")
+            .unwrap_or_else(|_| default_embedding_dimension().to_string())
+            .parse()
+            .context("EMBEDDING_DIMENSION must be an integer")?;
 
-        let mut config: Self = serde_yaml::from_str(&contents)
-            .with_context(|| format!("failed to parse config file: {}", path.display()))?;
-
-        if let Ok(val) = std::env::var("DATABASE_URL") {
-            config.database_url = val;
-        }
-        if let Ok(val) = std::env::var("OPENROUTER_API_KEY") {
-            config.openrouter_api_key = val;
-        }
-        if let Ok(val) = std::env::var("OPENROUTER_BASE_URL") {
-            config.openrouter_base_url = val;
-        }
-        if let Ok(val) = std::env::var("EMBEDDING_MODEL") {
-            config.embedding_model = val;
-        }
-        if let Ok(val) = std::env::var("EMBEDDING_DIMENSION") {
-            config.embedding_dimension = val.parse().context("EMBEDDING_DIMENSION must be an integer")?;
-        }
-
-        Ok(config)
+        Ok(Config {
+            database_url,
+            openrouter_api_key,
+            openrouter_base_url,
+            embedding_model,
+            embedding_dimension,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
+    use std::sync::{Mutex, MutexGuard};
 
-    fn clear_config_env() {
-        std::env::remove_var("DATABASE_URL");
-        std::env::remove_var("OPENROUTER_API_KEY");
-        std::env::remove_var("OPENROUTER_BASE_URL");
-        std::env::remove_var("EMBEDDING_MODEL");
-        std::env::remove_var("EMBEDDING_DIMENSION");
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    const ENV_KEYS: [&str; 5] = [
+        "DATABASE_URL",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_BASE_URL",
+        "EMBEDDING_MODEL",
+        "EMBEDDING_DIMENSION",
+    ];
+
+    struct EnvGuard {
+        _lock: MutexGuard<'static, ()>,
+        saved: Vec<(String, Option<String>)>,
+    }
+
+    impl EnvGuard {
+        fn clear() -> Self {
+            let lock = ENV_LOCK.lock().unwrap();
+            let saved = ENV_KEYS
+                .iter()
+                .map(|key| {
+                    let value = std::env::var(key).ok();
+                    std::env::remove_var(key);
+                    (key.to_string(), value)
+                })
+                .collect();
+            Self {
+                _lock: lock,
+                saved,
+            }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, value) in &self.saved {
+                match value {
+                    Some(val) => std::env::set_var(key, val),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
     }
 
     #[test]
-    fn test_from_file_basic() {
-        clear_config_env();
+    fn test_required_vars_present_with_defaults() {
+        let _guard = EnvGuard::clear();
+        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
+        std::env::set_var("OPENROUTER_API_KEY", "sk-test-123");
 
-        let yaml = r#"
-database_url: "postgres://localhost/test"
-openrouter_api_key: "sk-test-123"
-"#;
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(yaml.as_bytes()).unwrap();
-
-        let config = Config::from_file(file.path()).unwrap();
+        let config = Config::from_env().unwrap();
         assert_eq!(config.database_url, "postgres://localhost/test");
         assert_eq!(config.openrouter_api_key, "sk-test-123");
         assert_eq!(config.openrouter_base_url, "https://openrouter.ai/api/v1");
@@ -88,55 +114,54 @@ openrouter_api_key: "sk-test-123"
     }
 
     #[test]
-    fn test_from_file_with_custom_fields() {
-        clear_config_env();
+    fn test_missing_database_url() {
+        let _guard = EnvGuard::clear();
+        std::env::set_var("OPENROUTER_API_KEY", "sk-test-123");
 
-        let yaml = r#"
-database_url: "postgres://localhost/test"
-openrouter_api_key: "sk-test"
-openrouter_base_url: "https://custom.api/v1"
-embedding_model: "custom-model"
-embedding_dimension: 768
-"#;
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(yaml.as_bytes()).unwrap();
-
-        let config = Config::from_file(file.path()).unwrap();
-        assert_eq!(config.openrouter_base_url, "https://custom.api/v1");
-        assert_eq!(config.embedding_model, "custom-model");
-        assert_eq!(config.embedding_dimension, 768);
+        let err = Config::from_env().unwrap_err();
+        assert!(err.to_string().contains("DATABASE_URL"));
     }
 
     #[test]
-    fn test_env_var_overrides_file() {
-        clear_config_env();
+    fn test_missing_openrouter_api_key() {
+        let _guard = EnvGuard::clear();
+        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
 
-        let yaml = r#"
-database_url: "postgres://localhost/test"
-openrouter_api_key: "sk-file-key"
-"#;
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(yaml.as_bytes()).unwrap();
+        let err = Config::from_env().unwrap_err();
+        assert!(err.to_string().contains("OPENROUTER_API_KEY"));
+    }
 
-        std::env::set_var("OPENROUTER_API_KEY", "sk-env-key");
+    #[test]
+    fn test_optional_vars_omitted_use_defaults() {
+        let _guard = EnvGuard::clear();
+        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
+        std::env::set_var("OPENROUTER_API_KEY", "sk-test-123");
+
+        let config = Config::from_env().unwrap();
+        assert_eq!(config.openrouter_base_url, "https://openrouter.ai/api/v1");
+        assert_eq!(config.embedding_model, "openai/text-embedding-3-small");
+        assert_eq!(config.embedding_dimension, 1536);
+    }
+
+    #[test]
+    fn test_embedding_dimension_override() {
+        let _guard = EnvGuard::clear();
+        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
+        std::env::set_var("OPENROUTER_API_KEY", "sk-test-123");
         std::env::set_var("EMBEDDING_DIMENSION", "3072");
 
-        let config = Config::from_file(file.path()).unwrap();
-        assert_eq!(config.openrouter_api_key, "sk-env-key");
+        let config = Config::from_env().unwrap();
         assert_eq!(config.embedding_dimension, 3072);
     }
 
     #[test]
-    fn test_missing_file_is_error() {
-        let result = Config::from_file(Path::new("/nonexistent/config.yaml"));
-        assert!(result.is_err());
-    }
+    fn test_embedding_dimension_non_integer() {
+        let _guard = EnvGuard::clear();
+        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
+        std::env::set_var("OPENROUTER_API_KEY", "sk-test-123");
+        std::env::set_var("EMBEDDING_DIMENSION", "not-a-number");
 
-    #[test]
-    fn test_invalid_yaml_is_error() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(b"not: valid: yaml: [").unwrap();
-        let result = Config::from_file(file.path());
-        assert!(result.is_err());
+        let err = Config::from_env().unwrap_err();
+        assert!(err.to_string().contains("EMBEDDING_DIMENSION"));
     }
 }

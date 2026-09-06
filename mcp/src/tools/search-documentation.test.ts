@@ -1,21 +1,17 @@
 import { describe, it, expect, mock } from "bun:test";
 import { createSearchDocumentationTool } from "./search-documentation";
-import type { Sql } from "../db";
-import type { EmbeddingClient } from "../embedding";
+import type { ApiClient, ApiSearchResult } from "../api-client";
 
-function createMockSql(rows: unknown[]): Sql {
-  return mock(async (_strings: TemplateStringsArray, ..._values: unknown[]) => rows) as unknown as Sql;
-}
-
-function createMockEmbeddingClient(): EmbeddingClient {
+function createMockApiClient(rows: ApiSearchResult[]): ApiClient {
   return {
-    embed: mock(async (_: string): Promise<number[]> => new Array(1536).fill(0)),
+    search: mock(async () => rows),
+    getDocumentMetadata: mock(async () => null),
   };
 }
 
 describe("search_documentation tool", () => {
   it("returns ranked results with chunk/path/project/heading/similarity", async () => {
-    const rows = [
+    const rows: ApiSearchResult[] = [
       {
         title: "Authentication Architecture",
         path: "docs/auth.md",
@@ -23,10 +19,11 @@ describe("search_documentation tool", () => {
         heading: "Authentication",
         chunk: "All API calls must include a bearer token...",
         similarity: 0.92,
+        repositoryUrl: "https://github.com/acme/docs.git",
       },
     ];
-    const sql = createMockSql(rows);
-    const tool = createSearchDocumentationTool(sql, createMockEmbeddingClient());
+    const apiClient = createMockApiClient(rows);
+    const tool = createSearchDocumentationTool(apiClient, undefined);
 
     const results = await tool.handler({ project: "payments", query: "OAuth authentication", limit: 10 });
 
@@ -40,27 +37,44 @@ describe("search_documentation tool", () => {
       similarity: 0.92,
     });
     expect(results[0].chunk).toBe("All API calls must include a bearer token...");
+    expect(results[0].repositoryUrl).toBe("https://github.com/acme/docs.git");
   });
 
-  it("passes the embedded query vector and project filter into the SQL query", async () => {
-    const sql = createMockSql([]);
-    const embeddingClient = createMockEmbeddingClient();
-    const tool = createSearchDocumentationTool(sql, embeddingClient);
+  it("passes the query, project, and limit to the API client", async () => {
+    const apiClient = createMockApiClient([]);
+    const tool = createSearchDocumentationTool(apiClient, undefined);
 
     await tool.handler({ project: "payments", query: "OAuth", limit: 5 });
 
-    expect(embeddingClient.embed).toHaveBeenCalledWith("OAuth");
-
-    const sqlMock = sql as unknown as { mock: { calls: unknown[][] } };
-    const callValues = sqlMock.mock.calls[0] as unknown[];
-    expect(callValues).toContain("payments");
-    expect(callValues).toContain(5);
+    expect(apiClient.search).toHaveBeenCalledWith({ query: "OAuth", project: "payments", limit: 5 });
   });
 
   it("validates that project and query are required strings", () => {
-    const tool = createSearchDocumentationTool(createMockSql([]), createMockEmbeddingClient());
+    const apiClient = createMockApiClient([]);
+    const tool = createSearchDocumentationTool(apiClient, undefined);
 
     const parsed = tool.inputSchema.safeParse({ query: "OAuth", limit: 5 });
     expect(parsed.success).toBe(false);
+  });
+
+  it("omits project from schema when defaultProject is set", () => {
+    const apiClient = createMockApiClient([]);
+    const tool = createSearchDocumentationTool(apiClient, "default-proj");
+
+    const withoutProject = tool.inputSchema.safeParse({ query: "test" });
+    expect(withoutProject.success).toBe(true);
+
+    const withProject = tool.inputSchema.safeParse({ project: "other", query: "test" });
+    expect(withProject.success).toBe(true);
+    expect((withProject as any).data).not.toHaveProperty("project");
+  });
+
+  it("handler uses defaultProject when set", async () => {
+    const apiClient = createMockApiClient([]);
+    const tool = createSearchDocumentationTool(apiClient, "my-project");
+
+    await tool.handler({ query: "test", limit: 5 });
+
+    expect(apiClient.search).toHaveBeenCalledWith({ query: "test", project: "my-project", limit: 5 });
   });
 });

@@ -1,21 +1,19 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { getConfig, type McpConfig } from "./config";
-import { createPool, type Sql } from "./db";
-import { createEmbeddingClient, type EmbeddingClient } from "./embedding";
+import { createApiClient, type ApiClient } from "./api-client";
 import { createGitProvider, type GitProvider } from "./git";
 import { createSearchDocumentationTool } from "./tools/search-documentation";
 import { createGetDocumentTool } from "./tools/get-document";
 
 export function buildMcpServer(
   _config: McpConfig,
-  sql: Sql,
-  embeddingClient: EmbeddingClient,
+  apiClient: ApiClient,
   gitProvider: GitProvider
 ): McpServer {
   const server = new McpServer({ name: "docs-indexer", version: "0.1.0" });
 
-  const searchTool = createSearchDocumentationTool(sql, embeddingClient);
+  const searchTool = createSearchDocumentationTool(apiClient, _config.defaultProject);
   const searchDocumentToolDescription = `
 Search the project's indexed documentation to discover and disambiguate concepts,
 terminology, components, APIs, workflows, and implementation details.
@@ -57,7 +55,7 @@ IMPORTANT:
     }
   );
 
-  const getDocumentTool = createGetDocumentTool(sql, gitProvider);
+  const getDocumentTool = createGetDocumentTool(apiClient, gitProvider, _config.localRepos, _config.defaultProject);
   const getDocumentToolDescription = `
 Retrieve the complete content of a specific documentation file from the project's Git
 source of truth on the main branch.
@@ -99,11 +97,10 @@ IMPORTANT:
 
 async function main() {
   const config = getConfig();
-  const sql = createPool(config);
-  const embeddingClient = createEmbeddingClient(config);
+  const apiClient = createApiClient(config.apiUrl);
   const gitProvider = createGitProvider(config.scmToken);
 
-  const server = buildMcpServer(config, sql, embeddingClient, gitProvider);
+  const server = buildMcpServer(config, apiClient, gitProvider);
 
   const handle = serveStdio(() => server);
 

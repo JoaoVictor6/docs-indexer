@@ -46,7 +46,7 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           RUST_LOG: info
         run: |
-          cargo test --lib -- --test-threads=1
+          cd cli && cargo test --lib -- --test-threads=1
 
   build-docker:
     runs-on: ubuntu-latest

@@ -60,7 +60,7 @@ class GitHubGitProvider implements GitProvider {
 
 export class BitbucketGitProvider implements GitProvider {
   private token: string;
-  private readonly baseUrl = "https://bitbucket.org";
+  private readonly baseUrl = "https://api.bitbucket.org";
 
   constructor(scmToken: string) {
     this.token = scmToken;
@@ -75,7 +75,7 @@ export class BitbucketGitProvider implements GitProvider {
       );
     }
 
-    const rawUrl = `${this.baseUrl}/${repo.owner}/${repo.repo}/raw/${branch}/${path}`;
+    const rawUrl = `${this.baseUrl}/2.0/repositories/${repo.owner}/${repo.repo}/src/${branch}/${path}`;
     const response = await fetch(rawUrl, {
       method: "GET",
       headers: {
@@ -108,7 +108,7 @@ export function parseRepositoryUrl(repositoryUrl: string): RepositoryUrl {
   }
 
   const sshMatch = repositoryUrl.match(
-    /^git@(github\.com):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
+    /^git@(github\.com|bitbucket\.org):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
   );
   if (sshMatch) {
     const [, host, owner, repo] = sshMatch;

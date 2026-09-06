@@ -44,6 +44,16 @@ describe("parseRepositoryUrl", () => {
     expect(result).toEqual({ provider: "github", owner: "acme", repo: "payments-docs" });
   });
 
+  it("parses a Bitbucket SSH URL with .git suffix", () => {
+    const result = parseRepositoryUrl("git@bitbucket.org:acme/payments-docs.git");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
+  it("parses a Bitbucket SSH URL without .git suffix", () => {
+    const result = parseRepositoryUrl("git@bitbucket.org:acme/payments-docs");
+    expect(result).toEqual({ provider: "bitbucket", owner: "acme", repo: "payments-docs" });
+  });
+
   it("parses owners with hyphens and dots", () => {
     const result = parseRepositoryUrl("https://github.com/my-org.prefix/payments-docs.git");
     expect(result).toEqual({ provider: "github", owner: "my-org.prefix", repo: "payments-docs" });
@@ -134,7 +144,7 @@ describe("GitProvider (GitHub)", () => {
 
     expect(content).toBe("# Bitbucket docs");
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://bitbucket.org/acme/payments-docs/raw/main/docs/auth.md",
+      "https://api.bitbucket.org/2.0/repositories/acme/payments-docs/src/main/docs/auth.md",
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Basic YmJwLXRlc3Q=",
@@ -189,7 +199,7 @@ describe("createGitProvider factory dispatch", () => {
     );
   });
 
-  it("routes Bitbucket URL to Bitbucket provider (bitbucket.org/.../raw/...)", async () => {
+  it("routes Bitbucket URL to Bitbucket provider (api.bitbucket.org/2.0/.../src/...)", async () => {
     const provider = createGitProvider("bbp-test");
 
     const fetchMock = mock(() =>
@@ -208,7 +218,7 @@ describe("createGitProvider factory dispatch", () => {
 
     expect(content).toBe("# Bitbucket routed");
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://bitbucket.org/acme/payments-docs/raw/main/docs/readme.md",
+      "https://api.bitbucket.org/2.0/repositories/acme/payments-docs/src/main/docs/readme.md",
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Basic YmJwLXRlc3Q=",
@@ -258,7 +268,7 @@ describe("BitbucketGitProvider", () => {
 
     expect(content).toBe("# Auth docs\n\nSample content");
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://bitbucket.org/acme/payments-docs/raw/main/docs/auth.md",
+      "https://api.bitbucket.org/2.0/repositories/acme/payments-docs/src/main/docs/auth.md",
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Basic YmJwLXRlc3Q=",

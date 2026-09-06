@@ -33,6 +33,7 @@ describe("createApiClient", () => {
       const urlCalled = fetchMock.mock.calls[0][0] as string;
       expect(urlCalled).toContain("/projects/compras-e%2Edoc/document");
       expect(urlCalled).not.toContain("/projects/compras-e.doc/document");
+      expect(fetchMock.mock.calls[0][1].headers).toEqual({ "X-Docs-Indexer-Source": "mcp" });
     });
 
     it("leaves normal characters unencoded", async () => {
@@ -114,6 +115,7 @@ describe("createApiClient", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const urlCalled = fetchMock.mock.calls[0][0] as string;
       expect(urlCalled).toContain("?q=hello+world&project=my-project&limit=5");
+      expect(fetchMock.mock.calls[0][1].headers).toEqual({ "X-Docs-Indexer-Source": "mcp" });
     });
   });
 });

@@ -42,3 +42,41 @@ describe("app with OpenAPI", () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe("metrics", () => {
+  it("serves Prometheus metrics at /metrics containing http_requests_total", async () => {
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
+    const response = await app.handle(new Request("http://localhost/metrics"));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("http_requests_total");
+  });
+
+  it("serves domain metrics at /metrics/domain containing docs_indexer_db_queries_total", async () => {
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
+    const response = await app.handle(new Request("http://localhost/metrics/domain"));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("docs_indexer_db_queries_total");
+  });
+
+  it("labels the source as mcp when the X-Docs-Indexer-Source header is set", async () => {
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
+    await app.handle(
+      new Request("http://localhost/not-found", {
+        headers: { "X-Docs-Indexer-Source": "mcp" },
+      })
+    );
+    const response = await app.handle(new Request("http://localhost/metrics"));
+    const body = await response.text();
+    expect(body).toContain('source="mcp"');
+  });
+
+  it("labels the source as http when no X-Docs-Indexer-Source header is set", async () => {
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
+    await app.handle(new Request("http://localhost/not-found"));
+    const response = await app.handle(new Request("http://localhost/metrics"));
+    const body = await response.text();
+    expect(body).toContain('source="http"');
+  });
+});

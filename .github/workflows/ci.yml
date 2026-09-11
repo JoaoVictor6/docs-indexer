@@ -59,3 +59,37 @@ jobs:
 
       - name: Verify binary
         run: docker run --rm docs-indexer:ci --version
+
+  test-bun:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: docsindexer
+          POSTGRES_PASSWORD: docsindexer
+          POSTGRES_DB: docsindexer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://docsindexer:docsindexer@localhost:5432/docsindexer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+
+      - name: Run API tests
+        run: |
+          cd api && bun install && bun test src
+
+      - name: Run MCP tests
+        run: |
+          cd mcp && bun install && bun test src

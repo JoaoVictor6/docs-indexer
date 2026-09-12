@@ -242,3 +242,51 @@ cargo run -- --log-json index --project my-project --repository /path/to/docs
 ```
 
 Logs include `project`, `path`, `status`, `chunks`, `duration_ms`, `commit_sha`, and `model` per indexed file.
+
+## Telemetry
+
+The API exports Prometheus metrics, scraped by Prometheus and visualized in Grafana. Loki is provisioned but reserved for structured log shipping (out of scope for now).
+
+```
+  API (HTTP)    ──► requests_total, request_duration_seconds ──┐
+  Embeddings    ──► requests_total, duration_seconds ──────────┼──► Prometheus ──► Grafana
+  PostgreSQL    ──► queries, query_duration, size, docs, chunks┘
+  Logs          ────────────────────────────────────────────────► Loki (reserved)
+```
+
+All metrics are served from a single `GET /metrics` endpoint on the API (port 3000).
+
+| Metric | Type | Labels |
+|---|---|---|
+| `docs_indexer_http_requests_total` | Counter | `method`, `path`, `status`, `service="docs-indexer"`, `source` |
+| `docs_indexer_http_request_duration_seconds` | Histogram | `method`, `path`, `status`, `service="docs-indexer"`, `source` |
+| `docs_indexer_embedding_requests_total` | Counter | `provider`, `model` |
+| `docs_indexer_embedding_duration_seconds` | Histogram | `provider`, `model` |
+| `docs_indexer_db_queries_total` | Counter | — |
+| `docs_indexer_db_query_duration_seconds` | Histogram | — |
+| `docs_indexer_db_size_bytes` | Gauge | — |
+| `docs_indexer_documents` | Gauge | — |
+| `docs_indexer_chunks` | Gauge | — |
+
+### Source header contract
+
+The MCP server sends `X-Docs-Indexer-Source: mcp` on every API call. The API reads this header to set the HTTP metric `source` label; when the header is absent the label is `http`.
+
+### Running the stack
+
+```bash
+# Start PostgreSQL + Prometheus + Grafana + Loki
+docker compose -f infra/docker-compose.yml up -d
+
+# Run the API on the host (Prometheus scrapes it via host.docker.internal:3000)
+cd api && bun run dev
+```
+
+- Grafana: http://localhost:3001 (admin/admin) — "docs-indexer Telemetry" dashboard auto-provisioned
+- Prometheus: http://localhost:9090
+
+### Configuration
+
+| Env Var | Default | Description |
+|---|---|---|
+| `DB_COLLECTOR_INTERVAL_MS` | `60000` | How often the DB size/document/chunk gauges are collected (ms) |

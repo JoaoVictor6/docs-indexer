@@ -16,7 +16,7 @@ const documentResponseSchema = z.object({
 export function createProjectDocumentRoute(sql: Sql) {
   return new Elysia({ name: "project-document" }).get(
     "/projects/:name/document",
-    async ({ params, query }) => {
+    async ({ params, query, set }) => {
       const rows = await sql`
         SELECT
           p.name AS project,
@@ -29,10 +29,8 @@ export function createProjectDocumentRoute(sql: Sql) {
       `;
 
       if (rows.length === 0) {
-        return new Response(
-          JSON.stringify({ error: `Project '${params.name}' not found` }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
+        set.status = 404;
+        return { error: `Project '${params.name}' not found` };
       }
 
       return {

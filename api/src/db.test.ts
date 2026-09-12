@@ -8,6 +8,7 @@ describe("createPool", () => {
     openrouterBaseUrl: "https://openrouter.ai/api/v1",
     embeddingModel: "openai/text-embedding-3-small",
     port: 3000,
+    dbCollectorIntervalMs: 60000,
   };
 
   it("returns a sql instance when given a valid config", async () => {

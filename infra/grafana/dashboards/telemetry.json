@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 39,
+  "title": "docs-indexer Telemetry",
+  "uid": "telemetry",
+  "tags": [],
+  "timezone": "browser",
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests rate",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "targets": [{"expr": "sum by (path) (rate(docs_indexer_http_requests_total{service=\"docs-indexer\"}[5m]))", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "MCP vs direct",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "targets": [{"expr": "sum by (source) (rate(docs_indexer_http_requests_total{service=\"docs-indexer\"}[5m]))", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "Embedding request rate",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "targets": [{"expr": "sum by (model) (rate(docs_indexer_embedding_requests_total[5m]))", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "Embedding latency p95",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le, model) (rate(docs_indexer_embedding_duration_seconds_bucket[5m])))", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "DB query latency p95",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 5,
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(docs_indexer_db_query_duration_seconds_bucket[5m])))", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "DB size",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 6,
+      "targets": [{"expr": "docs_indexer_db_size_bytes", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "Documents",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "id": 7,
+      "targets": [{"expr": "docs_indexer_documents", "refId": "A"}],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "Chunks",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "id": 8,
+      "targets": [{"expr": "docs_indexer_chunks", "refId": "A"}],
+      "interval": "1m"
+    }
+  ]
+}

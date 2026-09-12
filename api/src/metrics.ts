@@ -69,14 +69,11 @@ export function startHttpTimer(ctx: { request: Request }): void {
 }
 
 export function recordHttpMetric(
-  ctx: { request: Request; route?: string; path?: string; set: { status?: number } },
+  ctx: { request: Request; route?: string; set: { status?: number } },
   status: number
 ): void {
   const { request } = ctx;
-  const path = (ctx.route ?? ctx.path ?? new URL(request.url).pathname).replace(
-    /:\d+([/?]|$)/g,
-    "/:id$1"
-  );
+  const path = ctx.route ?? new URL(request.url).pathname;
   const defaults = {
     method: request.method.toUpperCase(),
     path,

@@ -88,4 +88,23 @@ describe("metrics", () => {
     expect(httpLine).toBeDefined();
     expect(httpLine).toMatch(/source="http"/);
   });
+
+  it("labels path with the normalized route pattern, not the concrete URL", async () => {
+    const app = buildApp(createMockSql(), createMockEmbeddingClient());
+    await app.handle(
+      new Request("http://localhost/projects/some-project/document?path=x")
+    );
+    const response = await app.handle(new Request("http://localhost/metrics"));
+    const body = await response.text();
+    const line = body
+      .split("\n")
+      .find(
+        (l) =>
+          l.startsWith("docs_indexer_http_requests_total{") &&
+          l.includes("path=\"/projects/:name/document\"")
+      );
+    expect(line).toBeDefined();
+    expect(line).toMatch(/status="404"/);
+    expect(line).not.toContain("some-project");
+  });
 });

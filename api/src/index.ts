@@ -38,15 +38,15 @@ export function buildApp(sql: Sql, embeddingClient: EmbeddingClient): Elysia {
       (set as any).__start = Date.now();
       startHttpTimer({ request });
     })
-    .onAfterHandle(({ request, set }) => {
+    .onAfterHandle(({ request, set, route }) => {
       const start = (set as any).__start;
       const duration = start ? Date.now() - start : 0;
       console.log(`${request.method} ${new URL(request.url).pathname} ${set.status} ${duration}ms`);
-      recordHttpMetric({ request, set }, set.status);
+      recordHttpMetric({ request, route, set }, set.status);
     })
-    .onError(({ request, code, set }) => {
+    .onError(({ request, code, set, route }) => {
       console.log(`${request.method} ${new URL(request.url).pathname} ${set.status} error=${code}`);
-      recordHttpMetric({ request, set }, set.status);
+      recordHttpMetric({ request, route, set }, set.status);
     })
     .use(searchRoute)
     .use(projectDocumentRoute) as unknown as Elysia;
